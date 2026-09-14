@@ -24,7 +24,7 @@ export function Observatory({ projectImage, mapImage }: { projectImage: string; 
   const [notesProject, setNotesProject] = useState<ProjectId | null>(null);
   const [projectPanel, setProjectPanel] = useState<ProjectId | null>(null);
   const [motionChoice, setMotionChoice] = useState<boolean | null>(null);
-  const [reducedMotion, setReducedMotion] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const audioOn = useStore($audioEnabled);
   const contentRef = useRef<HTMLDivElement>(null);
   const observatoryRef = useRef<HTMLDivElement>(null);
