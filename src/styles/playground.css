@@ -1,6 +1,14 @@
 .playground { position: relative; min-height: 660px; height: min(880px,calc(100svh - 88px)); isolation: isolate; overflow: hidden; background: radial-gradient(ellipse at 55% 57%,#34487626,transparent 65%); }
 .playground-world { position: absolute; inset: 70px 0 72px; z-index: 0; }
-[data-motion="on"] .playground-world { transform-origin: 50% 70%; transform: translateY(calc(var(--universe-departure, 0) * -36px)) scale(calc(1 - var(--universe-departure, 0) * .16)); opacity: calc(1 - var(--universe-departure, 0) * .3); }
+/* The canvas ends on a hard line, which reads as a border against the section
+   below and clips anything the camera brings near the edge. Fading its top and
+   bottom to transparent dissolves that seam. Masking the canvas rather than
+   .playground-world keeps the overlaid labels and camera toolbar at full opacity. */
+[data-exploration-world] canvas { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 76px, #000 calc(100% - 104px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 76px, #000 calc(100% - 104px), transparent 100%); }
+/* No scale on departure: shrinking the world as the page scrolls reads as a
+   camera zoom-out, and zoom belongs to Ctrl+wheel alone. The lift and fade still
+   hand the stage over to the next section. */
+[data-motion="on"] .playground-world { transform-origin: 50% 70%; transform: translateY(calc(var(--universe-departure, 0) * -36px)); opacity: calc(1 - var(--universe-departure, 0) * .3); }
 .playground-intro { position: relative; z-index: 2; pointer-events: none; padding: 28px 0 0 clamp(24px,4vw,64px); width: fit-content; }
 .playground-kicker { color: var(--obs-muted); display: flex; align-items: center; gap: 8px; }
 .playground-kicker span { width: 5px; height: 5px; border-radius: 50%; background: var(--obs-accent); }
