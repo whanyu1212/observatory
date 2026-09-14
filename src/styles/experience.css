@@ -1,0 +1,193 @@
+.experience {
+  --career-tone: var(--obs-accent);
+  padding: 54px clamp(24px, 4vw, 64px) 80px;
+  background: radial-gradient(ellipse 60% 430px at 70% 190px, color-mix(in srgb, var(--obs-glow), transparent 83%), transparent 85%);
+}
+.experience [data-tone='lime'] { --career-tone: var(--obs-accent); }
+.experience [data-tone='blue'] { --career-tone: #8cc9ed; }
+.experience [data-tone='violet'] { --career-tone: #c4b0ef; }
+.experience .experience-label { display: flex; align-items: center; gap: 10px; color: var(--obs-muted); font: 12px/1.6 'IBM Plex Mono', monospace; letter-spacing: .12em; }
+.experience-label > span { color: var(--obs-accent); }
+.experience-intro { display: grid; grid-template-columns: 1fr .85fr; align-items: end; gap: clamp(36px, 8vw, 120px); }
+.experience-intro h1 { margin: 26px 0 0; font-size: clamp(66px, 8.2vw, 120px); font-weight: 500; line-height: .94; letter-spacing: -.07em; }
+.experience-intro h1 > span { color: var(--obs-accent); }
+.experience-intro-copy { max-width: 490px; padding-bottom: 6px; }
+.experience-intro-copy .experience-role { margin-bottom: 20px; color: var(--obs-ink); font-size: 19px; line-height: 1.5; }
+.experience-intro-copy > p:not(.experience-role) { color: var(--obs-muted); font-size: 17px; line-height: 1.8; }
+.experience-read { display: inline-flex; align-items: center; gap: 20px; min-height: 44px; margin-top: 24px; padding: 0; background: transparent; border: 0; color: var(--obs-accent); font-size: 14px; }
+.experience-read svg { transition: transform .2s; }
+.experience-read:hover svg { transform: translateY(4px); }
+
+/* The connected milestones are a compact, navigable career timeline. */
+.experience-route { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 56px 0 76px; }
+.experience-route button { position: relative; display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0; padding: 15px 22px 16px 0; border: 0; background: transparent; color: var(--obs-muted); }
+.experience-route button::after { content: ''; position: absolute; top: 54px; left: 6px; right: 0; height: 1px; background: linear-gradient(90deg, color-mix(in srgb, var(--career-tone), transparent 32%), var(--obs-line)); }
+.experience-route button:last-child::after { right: 0; background: linear-gradient(90deg, var(--career-tone), transparent); }
+.experience-route-year { font: 12px/1.5 'IBM Plex Mono', monospace; letter-spacing: .07em; }
+.experience-route-node { position: relative; z-index: 1; width: 9px; height: 9px; margin: 17px 0 19px; border: 1px solid var(--career-tone); border-radius: 50%; background: var(--obs-bg); box-shadow: 0 0 15px color-mix(in srgb, var(--career-tone), transparent 70%); transition: box-shadow .25s, background .25s; }
+.experience-route button:last-child .experience-route-node { background: var(--career-tone); }
+.experience-route strong { color: var(--obs-ink); font-size: 17px; line-height: 1.4; font-weight: 500; transition: color .2s; }
+.experience-route-domain { margin-top: 6px; font-size: 13px; line-height: 1.55; }
+.experience-route button:hover strong { color: var(--career-tone); }
+.experience-route button:hover .experience-route-node { background: var(--career-tone); box-shadow: 0 0 22px var(--career-tone); }
+
+.experience-layout { display: grid; grid-template-columns: 205px minmax(0, 1fr); gap: clamp(38px, 6vw, 90px); align-items: start; }
+.experience-index { position: sticky; top: 28px; padding-bottom: 24px; }
+.experience-index-items { position: relative; margin-top: 22px; }
+.experience-index-items::before { content: ''; position: absolute; top: 16px; bottom: 18px; left: 0; width: 1px; background: var(--obs-line); }
+.experience-index button { position: relative; display: flex; gap: 13px; width: 100%; padding: 18px 0 18px 18px; border: 0; background: transparent; color: var(--obs-muted); text-align: left; }
+.experience-index button::before { content: ''; position: absolute; top: 21px; bottom: 21px; left: -1px; width: 3px; background: transparent; transition: background .25s, box-shadow .25s; }
+.experience-index button[aria-current='location']::before { background: var(--obs-accent); box-shadow: 0 0 18px color-mix(in srgb, var(--obs-accent), transparent 40%); }
+.experience-index-number { padding-top: 2px; font: 12px/1.5 'IBM Plex Mono', monospace; }
+.experience-index strong { display: block; font-size: 15px; font-weight: 500; line-height: 1.4; }
+.experience-index small { display: block; margin-top: 5px; color: var(--obs-muted); font-size: 12px; line-height: 1.6; }
+.experience-index button[aria-current='location'], .experience-index button:hover { color: var(--obs-accent); }
+.experience-index .experience-index-note { margin-top: 38px; padding-left: 18px; color: var(--obs-muted); font-size: 13px; line-height: 1.8; }
+.experience-chapters { min-width: 0; }
+
+.career-chapter { position: relative; scroll-margin-top: 30px; margin-bottom: 68px; padding: clamp(25px, 3vw, 42px); border: 1px solid color-mix(in srgb, var(--career-tone), transparent 77%); border-radius: 3px 26px 3px 3px; background: radial-gradient(ellipse at 98% 0%, color-mix(in srgb, var(--career-tone), transparent 93%), transparent 44%), linear-gradient(155deg, #101927cf, #090f1cc7 50%); }
+.career-chapter::before { content: ''; position: absolute; left: 32px; top: -1px; width: 82px; height: 2px; background: var(--career-tone); box-shadow: 0 0 24px color-mix(in srgb, var(--career-tone), transparent 48%); }
+.career-chapter:focus, .career-education:focus { outline: none; }
+.career-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; color: var(--obs-muted); font: 12px/1.6 'IBM Plex Mono', monospace; }
+.career-meta > span:first-child { color: var(--career-tone); }
+.career-meta > span:last-child { text-align: right; }
+.career-employer { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 30px 0 26px; border-bottom: 1px solid #ffffff12; }
+.career-employer > div { min-width: 0; }
+.career-employer h2 { max-width: 640px; font-size: clamp(30px, 3.4vw, 49px); font-weight: 500; line-height: 1.1; letter-spacing: -.05em; }
+.career-employer p { margin-top: 11px; color: var(--obs-muted); font-size: 16px; line-height: 1.5; }
+.career-chapter-number { color: color-mix(in srgb, var(--career-tone), transparent 78%); font-size: clamp(52px, 6vw, 82px); font-weight: 400; line-height: 1; letter-spacing: -.06em; }
+.career-story { padding: 28px 0 30px; }
+.career-story h3 { margin: 0 0 12px; font-size: clamp(23px, 2.3vw, 31px); font-weight: 450; line-height: 1.25; letter-spacing: -.035em; }
+.career-story > p { max-width: 770px; color: var(--obs-muted); font-size: 16px; line-height: 1.75; }
+.career-agent-focus { margin-bottom: 30px; padding: 24px; border-left: 2px solid var(--career-tone); background: linear-gradient(115deg, color-mix(in srgb, var(--career-tone), transparent 93%), transparent); }
+.career-agent-focus .experience-label { color: var(--career-tone); }
+.career-agent-focus .experience-label svg { flex-shrink: 0; }
+.career-agent-focus h4 { margin: 16px 0 12px; font-size: clamp(21px, 2vw, 27px); font-weight: 500; line-height: 1.3; letter-spacing: -.03em; }
+.career-agent-focus > p:not(.experience-label) { color: var(--obs-muted); font-size: 16px; line-height: 1.8; }
+.agent-workflow { margin-top: 26px; }
+.agent-workflow-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.agent-workflow-steps button { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px 12px; border: 1px solid var(--obs-line); border-radius: 6px; background: #0a141d; color: var(--obs-muted); text-align: left; }
+.agent-workflow-step-number { color: var(--career-tone); font: 12px 'IBM Plex Mono', monospace; }
+.agent-workflow-steps button strong { font-size: 14px; line-height: 1.5; font-weight: 500; }
+.agent-workflow-steps button[aria-pressed="true"] { border-color: var(--career-tone); color: var(--obs-ink); background: linear-gradient(135deg, color-mix(in srgb, var(--career-tone), transparent 92%), #0a141d); }
+.agent-workflow-steps button[aria-pressed="true"] > svg { color: var(--career-tone); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--career-tone), transparent 40%)); }
+.agent-workflow-steps button:not(:last-child)::after { content: ''; position: absolute; left: calc(100% + 1px); top: 50%; height: 2px; width: 18px; background: linear-gradient(90deg, var(--obs-line), var(--career-tone), var(--obs-line)); background-size: 200% 100%; }
+.agent-workflow-steps button:focus-visible { outline: 2px solid var(--career-tone); outline-offset: 4px; }
+.agent-workflow-detail { min-height: 165px; padding-top: 23px; }
+.agent-workflow-detail > strong { color: var(--obs-ink); font-size: 18px; line-height: 1.5; font-weight: 500; }
+.agent-workflow-detail p { margin: 9px 0 0 !important; color: var(--obs-muted); font-size: 16px; line-height: 1.8; }
+.agent-workflow-caption { margin: 12px 0 0 !important; color: var(--obs-muted); font: 12px/1.7 'IBM Plex Mono', monospace; }
+@media (prefers-reduced-motion: no-preference) {
+  [data-motion="on"] .experience:not([hidden]) .agent-workflow-steps button:not(:last-child)::after { animation: agent-workflow-flow 2s linear infinite; }
+}
+@keyframes agent-workflow-flow { to { background-position: -200% 0; } }
+@media (max-width: 600px) {
+  .agent-workflow-steps { grid-template-columns: 1fr; gap: 14px; }
+  .agent-workflow-steps button { flex-direction: row; align-items: center; gap: 12px; padding: 14px; }
+  .agent-workflow-steps button:not(:last-child)::after { left: 38px; top: calc(100% + 1px); height: 14px; width: 2px; }
+  .agent-workflow-detail { min-height: 190px; }
+}
+.career-impact { display: grid; grid-template-columns: repeat(var(--metric-count), minmax(0, 1fr)); gap: 22px; margin: 0 0 35px; padding: 25px 0; border-top: 1px solid #ffffff12; border-bottom: 1px solid #ffffff12; }
+.career-impact > div { display: flex; flex-direction: column; min-width: 0; }
+.career-impact dt { order: 2; margin-top: 12px; color: var(--obs-ink); font-size: 14px; line-height: 1.55; }
+.career-impact dd { order: 1; margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; }
+.career-impact dd strong { color: var(--career-tone); font-size: clamp(33px, 3.8vw, 52px); font-weight: 450; line-height: 1.1; letter-spacing: -.055em; }
+.career-impact dd > span { color: var(--career-tone); font: 12px/1.4 'IBM Plex Mono', monospace; }
+.career-impact dt small { display: block; margin-top: 6px; color: var(--obs-muted); font-size: 12px; line-height: 1.6; }
+.career-work-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 14px; }
+.career-work-heading .experience-label { color: var(--career-tone); }
+.career-work-heading > span { color: var(--obs-muted); font-size: 12px; }
+.career-detail { border-top: 1px solid #ffffff12; }
+.career-detail summary { display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 18px 0; cursor: pointer; list-style: none; }
+.career-detail summary::-webkit-details-marker { display: none; }
+.career-detail summary:focus-visible { outline: 2px solid var(--career-tone); outline-offset: 4px; }
+.career-detail-number { color: var(--obs-muted); font: 12px/1.4 'IBM Plex Mono', monospace; }
+.career-detail h4 { flex: 1; margin: 0; color: var(--obs-ink); font-size: 16px; font-weight: 500; line-height: 1.5; }
+.career-detail summary svg { flex-shrink: 0; color: var(--obs-muted); transition: transform .2s, color .2s; }
+.career-detail[open] summary svg { transform: rotate(180deg); color: var(--career-tone); }
+.career-detail summary:hover h4 { color: var(--career-tone); }
+.career-detail-body { padding: 0 30px 24px; }
+.career-detail-body > p { color: var(--obs-muted); font-size: 16px; line-height: 1.8; }
+.career-detail-body ul { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 19px 0 0; padding: 0; list-style: none; }
+.career-detail-body li { color: var(--career-tone); font: 12px/1.5 'IBM Plex Mono', monospace; }
+
+.career-education { scroll-margin-top: 30px; padding: 8px 0 42px; }
+.career-education .experience-label { color: var(--obs-accent); }
+.career-education h2 { margin: 24px 0 20px; font-size: clamp(36px, 4.6vw, 61px); font-weight: 450; line-height: 1.05; letter-spacing: -.05em; }
+.career-education h2 > span { color: var(--obs-accent); }
+.career-education .career-university { color: var(--obs-muted); font-size: 16px; line-height: 1.6; }
+.career-degrees { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px; margin-top: 35px; }
+.career-degrees article { padding: 22px 0 0; border-top: 1px solid var(--obs-line); }
+.career-degrees article > span { color: var(--obs-accent); font: 12px/1.6 'IBM Plex Mono', monospace; }
+.career-degrees h3 { margin: 15px 0 12px; max-width: 340px; font-size: 23px; font-weight: 450; line-height: 1.25; letter-spacing: -.03em; }
+.career-degrees p { color: var(--obs-muted); font-size: 13px; line-height: 1.6; }
+.experience-outro { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px; padding: 35px 0 0; border-top: 1px solid var(--obs-line); }
+.experience-outro > p { color: var(--obs-muted); font-size: 16px; line-height: 1.6; }
+.experience-outro button { display: flex; align-items: center; gap: 15px; min-height: 48px; padding: 12px 18px; border: 1px solid var(--obs-accent); border-radius: 3px; background: var(--obs-accent); color: var(--obs-bg); font-size: 14px; font-weight: 500; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .observatory[data-motion='on'] .experience:not([hidden]) .experience-intro { animation: experience-arrive .6s both; }
+  .observatory[data-motion='on'] .experience:not([hidden]) .experience-route { animation: experience-arrive .6s .1s both; }
+  .observatory[data-motion='on'] .career-detail[open] .career-detail-body { animation: experience-arrive .25s both; }
+  .observatory[data-motion='on'] .experience-route button:last-child .experience-route-node { animation: career-beacon 3.5s ease-in-out infinite; }
+}
+@keyframes experience-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes career-beacon { 50% { box-shadow: 0 0 18px var(--career-tone), 0 0 0 5px color-mix(in srgb, var(--career-tone), transparent 92%); } }
+
+@media (max-width: 1100px) {
+  .experience-layout { grid-template-columns: 165px minmax(0, 1fr); gap: 30px; }
+  .career-impact { gap: 16px; }
+  .career-impact dd { flex-direction: column; align-items: flex-start; }
+  .career-chapter { padding: 26px; }
+}
+@media (max-width: 900px) {
+  .experience-intro { grid-template-columns: 1fr 1fr; gap: 30px; }
+  .experience-intro-copy .experience-role { font-size: 17px; }
+  .experience-intro-copy > p:not(.experience-role) { font-size: 16px; }
+  .experience-layout { display: block; }
+  .experience-index { top: 0; z-index: 5; margin: 0 -24px 26px; padding: 12px 24px; border-bottom: 1px solid var(--obs-line); background: #080e18f2; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+  .experience-index > .experience-label, .experience-index .experience-index-note, .experience-index-items::before { display: none; }
+  .experience-index-items { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .experience-index button { min-height: 46px; align-items: center; justify-content: center; gap: 8px; padding: 8px 5px; }
+  .experience-index button::before { top: auto; bottom: -5px; left: 20%; width: 60%; height: 2px; }
+  .experience-index small { display: none; }
+  .experience-index strong { font-size: 14px; }
+  .experience-index-number { padding-top: 0; }
+  .career-chapter, .career-education { scroll-margin-top: 96px; }
+  .career-impact dd { flex-direction: row; align-items: baseline; }
+}
+@media (max-width: 620px) {
+  .experience { padding: 34px 24px 50px; }
+  .experience-intro { grid-template-columns: 1fr; gap: 26px; }
+  .experience-intro h1 { font-size: clamp(64px, 18vw, 96px); margin-top: 20px; }
+  .experience-intro-copy .experience-role { margin-bottom: 11px; }
+  .experience-route { margin: 28px 0 30px; }
+  .experience-route button { padding-right: 12px; }
+  .experience-route strong { font-size: 14px; }
+  .experience-route-domain { display: none; }
+  .experience-route-year { font-size: 12px; letter-spacing: 0; }
+  .experience-index-number { display: none; }
+  .experience-index-items { gap: 2px; }
+  .career-chapter { padding: 24px 20px; margin-bottom: 38px; border-radius: 3px 20px 3px 3px; }
+  .career-meta { flex-direction: column; gap: 7px; }
+  .career-employer { padding: 23px 0; gap: 15px; }
+  .career-employer h2 { font-size: 32px; }
+  .career-chapter-number { font-size: 46px; }
+  .career-story { padding: 25px 0; }
+  .career-agent-focus { padding: 20px 0 20px 16px; }
+  .career-impact { grid-template-columns: 1fr; gap: 20px; }
+  .career-impact > div + div { padding-top: 20px; border-top: 1px solid #ffffff0c; }
+  .career-impact dd strong { font-size: 45px; }
+  .career-impact dt { margin-top: 8px; }
+  .career-work-heading { flex-wrap: wrap; }
+  .career-detail summary { gap: 9px; }
+  .career-detail-body { padding-inline: 0; }
+  .career-degrees { grid-template-columns: 1fr; gap: 26px; }
+}
+@media (max-width: 380px) {
+  .experience { padding-inline: 18px; }
+  .experience-index { margin-inline: -18px; padding-inline: 12px; }
+  .experience-index strong { font-size: 13px; }
+  .career-chapter { padding-inline: 16px; }
+  .career-chapter-number { display: none; }
+}

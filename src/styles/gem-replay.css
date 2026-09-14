@@ -1,0 +1,32 @@
+.gem-replay { margin: 0 0 30px; padding: 18px; border: 1px solid var(--obs-line); background: #09121d; border-radius: 12px; }
+.gem-replay-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
+.gem-replay-heading p { margin: 0 0 7px; color: var(--obs-accent); font: 12px/1.5 'IBM Plex Mono', monospace; }
+.gem-replay-heading h3 { margin: 0; font-size: 20px; font-weight: 500; line-height: 1.3; letter-spacing: -.035em; }
+.gem-replay-clock { color: var(--obs-accent); font: 28px/1 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+.gem-replay-map { position: relative; max-width: 560px; margin: auto; overflow: hidden; border-radius: 6px; background: #060b12; }
+.gem-replay-map svg { display: block; width: 100%; height: auto; }
+.gem-replay-map-label { position: absolute; bottom: 10px; left: 10px; max-width: calc(100% - 20px); padding: 7px 9px; border-radius: 4px; color: #edf2e8; background: #040c19d9; font: 12px/1.4 'IBM Plex Mono', monospace; pointer-events: none; }
+.gem-replay-transport { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 9px; margin-top: 16px; }
+.gem-replay-transport button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; min-width: 44px; padding: 0 10px; border: 1px solid var(--obs-line); border-radius: 5px; color: var(--obs-accent); background: #101e2a; font-size: 14px; }
+.gem-replay-transport button:disabled { opacity: .45; cursor: default; }
+.gem-replay-transport label { margin-left: auto; color: var(--obs-muted); font-size: 14px; }
+.gem-replay-transport output { margin-left: 8px; color: var(--obs-ink); font-variant-numeric: tabular-nums; }
+.gem-replay-transport input { grid-column: 1 / -1; width: 100%; height: 36px; accent-color: var(--obs-accent); cursor: ew-resize; }
+.gem-replay-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; margin-top: 12px; }
+.gem-replay-legend button { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 44px; padding: 7px 8px; color: var(--obs-muted); background: transparent; border: 1px solid transparent; border-radius: 4px; text-align: left; font-size: 14px; }
+.gem-replay-legend button:first-child { grid-column: 1 / -1; }
+.gem-replay-legend button[aria-pressed="true"] { border-color: var(--obs-line); color: var(--obs-ink); background: #ffffff08; }
+.gem-replay-legend button > span { font: 12px 'IBM Plex Mono', monospace; }
+.gem-replay-legend small { margin-left: auto; color: var(--obs-muted); font-size: 12px; }
+.gem-replay-source { margin: 16px 0 0 !important; color: var(--obs-muted); font-size: 12px; line-height: 1.7; }
+.gem-replay-source a { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; color: var(--obs-accent); }
+.gem-replay button:focus-visible, .gem-replay input:focus-visible, .gem-replay a:focus-visible { outline: 2px solid var(--obs-accent); outline-offset: 3px; }
+@media (max-width: 500px) {
+  .gem-replay { padding: 12px; }
+  .gem-replay-clock { font-size: 22px; }
+  .gem-replay-heading h3 { font-size: 18px; }
+  .gem-replay-transport label { font-size: 12px; }
+  .gem-replay-legend { column-gap: 4px; }
+  .gem-replay-legend button { flex-wrap: wrap; font-size: 12px; gap: 5px; }
+  .gem-replay-legend small { width: 100%; padding-left: 21px; }
+}

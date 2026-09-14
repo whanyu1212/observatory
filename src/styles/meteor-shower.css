@@ -1,0 +1,52 @@
+.obs-meteors {
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 auto;
+  height: min(1000px, 110svh);
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  mask-image: linear-gradient(#000 80%, transparent);
+}
+.obs-meteor {
+  position: absolute;
+  left: var(--meteor-x);
+  top: var(--meteor-y);
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.obs-meteor i {
+  position: absolute;
+  width: var(--meteor-length);
+  height: 1.5px;
+  border-radius: 100%;
+  background: linear-gradient(90deg, #f5fff6, #bfe7df 9%, #a9c8b666 35%, transparent);
+  transform-origin: left center;
+  transform: rotate(-33deg);
+  box-shadow: 0 0 7px #bdebdc33;
+}
+.obs-meteor i::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #f5fff6;
+  box-shadow: 0 0 5px #f5fff6, 0 0 13px #bbeada88;
+}
+.obs-meteors.is-active .obs-meteor {
+  animation: obs-meteor-flight var(--meteor-duration) var(--meteor-delay) linear infinite;
+}
+@keyframes obs-meteor-flight {
+  0% { opacity: 0; transform: translate3d(90px, -58px, 0); }
+  2% { opacity: .75; }
+  11% { opacity: .55; }
+  16%, 100% { opacity: 0; transform: translate3d(-600px, 390px, 0); }
+}
+@media (max-width: 700px) {
+  .obs-meteor i { width: calc(var(--meteor-length) * .65); height: 1px; }
+  .obs-meteor:nth-child(n + 4) { display: none; }
+}
