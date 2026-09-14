@@ -30,7 +30,9 @@ const rootStyle = {
 const labelStyle = {
   position: 'absolute', left: 0, top: 0, zIndex: 3, display: 'flex', alignItems: 'center', gap: '7px',
   minHeight: '30px', padding: '6px 9px 6px 7px', border: '1px solid rgba(217,249,145,.34)', borderRadius: '999px',
-  color: '#edf2e8', background: 'rgba(7,14,16,.82)', backdropFilter: 'blur(9px)', WebkitBackdropFilter: 'blur(9px)',
+  // No backdrop-filter: blurring 10 pills over the live WebGL canvas costs the
+  // compositor a re-blur every frame. A more opaque background reads the same.
+  color: '#edf2e8', background: 'rgba(7,14,16,.94)',
   boxShadow: '0 8px 26px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.025)',
   font: '600 10px/1 "IBM Plex Mono", monospace', letterSpacing: '.035em', whiteSpace: 'nowrap', cursor: 'pointer',
   willChange: 'transform, opacity', transition: 'opacity 180ms ease, border-color 180ms ease, background 180ms ease',
@@ -260,6 +262,10 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     let compact = false;
     let lastTime = performance.now();
     let lastPositionStamp = '';
+    // With motion paused the scene is static, so the loop keeps ticking but only
+    // pays for a draw when this signature of the visible state actually changes.
+    let lastIdleStamp = '';
+    let idleSince = 0;
     const activePointers = new Set<number>();
     let tapGesture: { pointerId: number; x: number; y: number; moved: number; multi: boolean; button: number } | null = null;
 
@@ -523,8 +529,32 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       host.dataset.cameraPolar = controls.getPolarAngle().toFixed(3);
       host.dataset.cameraDistance = controls.getDistance().toFixed(2);
       atmosphere.update(dt, animate, camera);
-      positionLabels();
-      renderer.render(scene, camera);
+      // When motion is paused nothing animates on its own, so a redraw is only
+      // worth its cost once something the viewer can see has moved. Everything
+      // that changes the image contributes to the signature below.
+      let shouldDraw = true;
+      if (!animate && !force) {
+        const idleStamp = [
+          positionStamp,
+          camera.position.x.toFixed(3), camera.position.y.toFixed(3), camera.position.z.toFixed(3),
+          controls.target.x.toFixed(3), controls.target.y.toFixed(3), controls.target.z.toFixed(3),
+          world.explorer.rotation.y.toFixed(3),
+          focusedProject ?? '', hoveredProject ?? '', lookAt ?? '',
+          landmarks.map(item => item.lift.toFixed(3)).join(),
+        ].join('|');
+        if (idleStamp === lastIdleStamp) {
+          // Damping, the travel trail and landmark lifts settle over a few frames
+          // after the stamp stops changing; keep drawing briefly so they land.
+          shouldDraw = now - idleSince < 500;
+        } else {
+          lastIdleStamp = idleStamp;
+          idleSince = now;
+        }
+      }
+      if (shouldDraw) {
+        positionLabels();
+        renderer.render(scene, camera);
+      }
       if (!force) frame = requestAnimationFrame(render);
     };
 
