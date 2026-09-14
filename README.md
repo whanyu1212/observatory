@@ -1,10 +1,36 @@
-# The Observatory — Hanyu Wu
+# The Observatory
 
-An interactive portfolio built with Astro, React, and Three.js. The overview is a playable small universe with a dense, independently twinkling starfield and blue-violet nebula clouds: steer an explorer with WASD/arrow keys or click a project landmark to travel. Ten featured projects sit on separate faceted asteroid islands, surrounded by slow orbiting fragments. They become places to discover, with a direct project menu and a three-stop guided tour. Gem Dota includes a guided walkthrough of genuine replay output. Discovery progress and the replay badge last for the current page session.
+> An interactive portfolio for **Hanyu Wu** — AI builder, data scientist, and open-source contributor.
 
-Drag the world with a mouse to orbit through 360 degrees. Ordinary scrolling moves down the page; hold Ctrl while scrolling, pinch, or use the camera buttons to zoom. On touchscreens, one-finger swipes scroll the page and two-finger gestures control the camera. Reset view returns to the opening composition. Tilt and zoom limits keep the universe in reach. Camera buttons also offer keyboard access. Project labels separate as the camera moves, with connecting lines when shifted; mobile keeps numbered markers and a project legend.
+The Observatory is a small, explorable universe that doubles as a portfolio. Instead of scrolling a list of projects, you steer an explorer through a starfield and *visit* them: ten featured projects sit on faceted asteroid islands, each a handcrafted sculpture of the thing it represents. Case studies, field notes, and open questions open in place, so the work is discovered rather than listed.
 
-Project case studies and field notes open contextually from the universe, using wide side panels on desktop and full-screen sheets on mobile. The landing introduction identifies Hanyu as an AI builder, data scientist, and open-source contributor, linking to ai-agent-book contribution highlights below the universe. The Overview flows from the universe to these contributions, then the contact footer; project questions and field notes carry the curiosity theme. Experience presents résumé-backed career chapters across Micron Technology, KPMG, and Singapore Tourism Board, followed by education. Micron leads with a visible agent-engineering highlight covering graph/state-machine agents and evaluation harnesses; production root-cause detection has its own work entry. Connected milestones and a scroll-aware chapter index navigate the page; each role pairs clearly qualified impact figures with expandable accounts of the work. About contains the personal profile, AdaL community role, and a contact section with email, LinkedIn, and GitHub links.
+Built with **Astro**, **React**, and **Three.js**.
+
+## Highlights
+
+- **A playable overview** — a dense, independently twinkling starfield and blue-violet nebula clouds. Travel with WASD/arrow keys, a direct project menu, or a three-stop guided tour.
+- **Projects as places** — ten asteroid islands with orbiting fragments and hand-built geometry: gem, wisp, prawn, sofa, agent team, trading chart, fractional coin, deployment rocket, brain with a barbell, and a layered terminal with an inspection lens.
+- **A real artifact to inspect** — Gem Dota includes a guided walkthrough of genuine Dota 2 replay output.
+- **Contextual reading** — project case studies and field notes as wide side panels on desktop, full-screen sheets on mobile.
+- **Experience as chapters** — résumé-backed career pages (Micron Technology, KPMG, Singapore Tourism Board) with connected milestones and a scroll-aware chapter index.
+- **Curiosity Map** — an interactive atlas of exploration trails and the questions behind each project.
+- **An OS-style workspace** — a HUD, dock, and app windows (dossier, deployments, comms, terminal, transmissions) framing the universe.
+
+## Navigating
+
+| Action | Desktop | Touch |
+| --- | --- | --- |
+| Move the explorer | WASD / arrow keys, or click a landmark | Tap a landmark |
+| Orbit the world (360°) | Drag with the mouse | Two-finger drag |
+| Zoom | Ctrl + scroll, or camera buttons | Pinch |
+| Scroll the page | Ordinary scroll | One-finger swipe |
+| Return to the opening shot | Reset view | Reset view |
+
+Camera buttons are keyboard accessible, and tilt/zoom limits keep the universe in reach. Project labels separate as the camera moves and draw connecting lines when shifted; mobile keeps numbered markers with a project legend. Discovery progress and the replay badge last for the current page session.
+
+## Accessibility and fallbacks
+
+Audio starts disabled. Motion follows the system preference by default; visitors can explicitly enable or pause it, and the choice is remembered in their browser. World, map, and star animations stop when inactive or out of view. With motion paused, deliberate destination selection still works. The world offers a project-button fallback if WebGL is unavailable, and mobile opens one workspace app at a time.
 
 ## Development
 
@@ -43,8 +69,6 @@ pnpm preview
 - `src/components/observatory/MeteorShower.tsx` and `src/styles/meteor-shower.css`: occasional meteor trails, with viewport, visibility, and motion controls.
 - `src/stores/osStore.ts`: workspace state and actions.
 - `src/components/apps/`: individual workspace views.
-
-Audio starts disabled. Motion follows the system preference by default; visitors can explicitly enable or pause it, and the choice is remembered in their browser. World, map, and star animations stop when inactive or out of view. With motion paused, deliberate destination selection still works; idle animation is stopped. The world offers a project-button fallback if WebGL is unavailable. Mobile opens one workspace app at a time.
 
 ## Project image
 
