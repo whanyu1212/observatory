@@ -269,6 +269,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     let idleSince = 0;
     const activePointers = new Set<number>();
     let tapGesture: { pointerId: number; x: number; y: number; moved: number; multi: boolean; button: number } | null = null;
+    let introBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+    let statusBounds = { left: 0, top: 0, right: 0, bottom: 0 };
 
     const setWaypoint = (id: ProjectId) => {
       targetProject = id;
@@ -350,8 +352,12 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         : [
             { left: Math.max(0, rect.width - 260), top: Math.max(0, rect.height - 62), right: rect.width, bottom: rect.height },
           ];
+      if (!compact) {
+        if (introBounds.right > 0 && introBounds.bottom > 0) occupied.push(introBounds);
+        if (statusBounds.left > 0 && statusBounds.bottom > 0) occupied.push(statusBounds);
+      }
       const verticalOffsets = [0, -36, 36, -72, 72, -108, 108];
-      const horizontalOffsets = [0, 54, -54, 92, -92];
+      const horizontalOffsets = [0, 54, -54, 92, -92, 130, -130];
       candidates.forEach(({ id, button, onScreen, sourceX, sourceY, width: labelWidth, height: labelHeight }) => {
         const leader = leaderRefs.current.get(id);
         let position: { x: number; y: number; box: { left: number; top: number; right: number; bottom: number } } | null = null;
@@ -403,8 +409,39 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       if (rect.width < 2 || rect.height < 2) return;
       width = Math.max(1, Math.round(rect.width));
       height = Math.max(1, Math.round(rect.height));
-      compact = width < 620;
+      compact = width < 700;
       host.dataset.compact = compact ? 'true' : 'false';
+      const hostRect = host.getBoundingClientRect();
+      const intro = host.closest('.playground')?.querySelector<HTMLElement>('.playground-intro');
+      if (intro) {
+        const introRect = intro.getBoundingClientRect();
+        const bottom = introRect.bottom - hostRect.top;
+        if (bottom > 0) {
+          introBounds = {
+            left: 0,
+            top: 0,
+            right: Math.max(0, introRect.right - hostRect.left + 16),
+            bottom: bottom + 12,
+          };
+        } else {
+          introBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+        }
+      }
+      const status = host.closest('.playground')?.querySelector<HTMLElement>('.playground-status');
+      if (status) {
+        const statusRect = status.getBoundingClientRect();
+        const bottom = statusRect.bottom - hostRect.top;
+        if (bottom > 0) {
+          statusBounds = {
+            left: Math.max(0, statusRect.left - hostRect.left - 12),
+            top: 0,
+            right: rect.width,
+            bottom: bottom + 10,
+          };
+        } else {
+          statusBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+        }
+      }
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       camera.fov = compact ? 54 : width / height < 1.15 ? 47 : 41;
@@ -821,7 +858,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         .world-camera-toolbar button:focus-visible { outline: 1px solid #d9f991; outline-offset: 2px; }
         .world-touch-hint { display: none; }
         .world-destination-legend { display: none; }
-        @media (max-width: 619px) {
+        @media (max-width: 700px) {
           .world-camera-toolbar {
             top: 10px;
             right: 10px;

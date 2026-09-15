@@ -14,7 +14,7 @@ export const WORLD_POINTS: Record<ProjectId, THREE.Vector3> = {
   'fractional-bonds': new THREE.Vector3(9.5, 0.3, 4.7),
   'shipping-ml': new THREE.Vector3(13.5, -0.9, -2.7),
   'mental-gym': new THREE.Vector3(4.5, 1.0, 7.3),
-  'claude-code-anatomy': new THREE.Vector3(-7.8, 0.6, -1.1),
+  'claude-code-anatomy': new THREE.Vector3(-5.6, 0.7, -2.6),
 };
 
 const islandOrigins = Object.values(WORLD_POINTS);
