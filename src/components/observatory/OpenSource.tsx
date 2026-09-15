@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import { ArrowUpRight, BookOpen, GitMerge } from 'lucide-react';
+import { ArrowUpRight, BookOpen, GitMerge, GitPullRequest } from 'lucide-react';
 import '@/styles/open-source.css';
 import type { OverviewJourney } from './overviewJourney';
 
@@ -8,24 +8,43 @@ const OpenKnowledgeBook = lazy(() => import('./OpenKnowledgeBook').then(module =
 const contributions = [
   {
     number: 81,
-    title: 'Make the ideas accessible.',
-    description: 'Polished the English translation of Chapters 1–2, helping readers follow the concepts across languages.',
+    title: 'Open the ideas to more readers.',
+    description: 'Polished the English translation of Chapters 1–2 for more natural, accessible reading while preserving their technical meaning.',
     area: 'TRANSLATION',
-    x: 16, y: 25, path: 'M 96 90 Q 120 194 276 194',
+    status: 'MERGED',
+    x: 14, y: 22, path: 'M 84 79 Q 156 168 276 194',
   },
   {
     number: 425,
-    title: 'Make the experiments easier to run.',
-    description: 'Standardized dependencies and experiment structure, with shared provider utilities and CI coverage.',
+    title: 'Make every experiment easier to run.',
+    description: 'Standardized dependencies and experiment structure, introducing shared provider utilities and CI coverage for more reproducible research.',
     area: 'ENGINEERING',
-    x: 81, y: 23, path: 'M 486 83 Q 410 194 276 194',
+    status: 'MERGED',
+    x: 49, y: 8, path: 'M 294 29 Q 300 112 276 194',
   },
   {
     number: 819,
-    title: 'Make the details trustworthy.',
-    description: 'Corrected the English Chapter 3 figure mappings and added regression tests for figure-caption alignment.',
+    title: 'Keep every figure trustworthy.',
+    description: 'Corrected the English Chapter 3 figure mappings and added regression tests to keep figures aligned with their captions.',
     area: 'QUALITY',
-    x: 77, y: 73, path: 'M 462 263 Q 372 263 276 194',
+    status: 'MERGED',
+    x: 84, y: 23, path: 'M 504 83 Q 406 174 276 194',
+  },
+  {
+    number: 1071,
+    title: 'Turn the book into a reading experience.',
+    description: 'Built an Astro site for all 10 chapters, bringing multilingual reading, interactive diagrams, responsive navigation, and tested content tooling to the book.',
+    area: 'EXPERIENCE',
+    status: 'MERGED',
+    x: 17, y: 75, path: 'M 102 270 Q 180 248 276 194',
+  },
+  {
+    number: 1085,
+    title: 'Make the architecture move clearly.',
+    description: 'Refined the agent-loop animation and responsive connectors so the architecture remains readable across desktop, tablet, and mobile screens.',
+    area: 'RESPONSIVE UI',
+    status: 'OPEN',
+    x: 81, y: 75, path: 'M 486 270 Q 382 248 276 194',
   },
 ];
 
@@ -47,12 +66,12 @@ export function OpenSource({ motionEnabled, journey }: { motionEnabled: boolean;
           <h2 id="open-source-title">Agent knowledge,<span>open to everyone.</span></h2>
         </div>
         <div className="obs-open-source-intro">
-          <p>I believe learning to build AI agents should be accessible to everyone. Through Bojie Li’s open-source ai-agent-book, I help make that knowledge easier to understand, put into practice, and build on—across languages and experience levels.</p>
+          <p>I contribute to Bojie Li’s open-source ai-agent-book across translation, engineering, testing, and the reading experience—helping make practical agent knowledge clearer, more reliable, and easier to explore.</p>
           <a className="obs-text-action" href="https://github.com/bojieli/ai-agent-book/pulls?q=is%3Apr+author%3Awhanyu1212" target="_blank" rel="noreferrer">Explore my contributions <ArrowUpRight size={15} /></a>
         </div>
       </div>
       <div className="obs-constellation">
-        <div className="obs-constellation-map" role="group" aria-label="Explore three featured contributions">
+        <div className="obs-constellation-map" role="group" aria-label="Explore five featured contributions">
           <svg viewBox="0 0 600 360" preserveAspectRatio="none" aria-hidden="true">
             {contributions.map((item, index) => <g key={item.number} data-active={index === active}>
               <path className="obs-constellation-orbit" d={item.path} />
@@ -70,7 +89,7 @@ export function OpenSource({ motionEnabled, journey }: { motionEnabled: boolean;
         </div>
         <div id="contribution-detail" className="obs-contribution-detail" aria-live="polite" aria-atomic="true">
           <article key={contribution.number}>
-            <div className="obs-contribution-meta obs-mono"><span>{contribution.area}</span><span><GitMerge size={14} /> MERGED / #{contribution.number}</span></div>
+            <div className="obs-contribution-meta obs-mono"><span>{contribution.area}</span><span>{contribution.status === 'MERGED' ? <GitMerge size={14} /> : <GitPullRequest size={14} />} {contribution.status} / #{contribution.number}</span></div>
             <h3>{contribution.title}</h3><p>{contribution.description}</p>
             <a className="obs-contribution-link" href={`https://github.com/bojieli/ai-agent-book/pull/${contribution.number}`} target="_blank" rel="noreferrer">Read the contribution <ArrowUpRight size={16} /></a>
           </article>

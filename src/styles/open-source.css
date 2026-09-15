@@ -24,7 +24,7 @@
 .obs-knowledge-book-credit { font-size: 12px; display: flex; gap: 8px; align-items: center; color: var(--obs-muted); }
 .obs-contribution-star { position: absolute; transform: translate(-50%, -12px); display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0 4px 8px; color: var(--obs-muted); background: none; border: 0; cursor: pointer; }
 .obs-star-light { width: 9px; height: 9px; margin: 7.5px; border-radius: 50%; background: var(--obs-muted); box-shadow: 0 0 0 5px color-mix(in srgb, var(--obs-muted), transparent 93%); transition: background .3s, box-shadow .3s, transform .3s; }
-.obs-contribution-star strong { font-size: 14px; font-weight: 500; line-height: 1.4; text-transform: capitalize; }
+.obs-contribution-star strong { font-size: 14px; font-weight: 500; line-height: 1.4; text-transform: capitalize; white-space: nowrap; }
 .obs-contribution-star > .obs-mono { font-size: 12px; line-height: 1.4; }
 .obs-contribution-star[aria-pressed="true"] { color: var(--obs-ink); }
 .obs-contribution-star[aria-pressed="true"] .obs-star-light { background: var(--obs-accent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--obs-accent), transparent 91%), 0 0 23px var(--obs-glow); transform: scale(1.15); }

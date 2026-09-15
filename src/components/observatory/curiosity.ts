@@ -16,7 +16,7 @@ export const projects: Record<ProjectId, {
   'gem-dota': {
     name: 'Gem Dota', trail: 'replays', title: ['Replay.', 'Revealed.'],
     question: 'What can a replay reveal?',
-    description: 'From raw Dota 2 replay bytes to player paths, teamfights, and match insights. A Python parser that makes the game readable.',
+    description: 'A Python-native Dota 2 replay parser that turns binary match data into structured events, player paths, interactive reports, and analysis-ready DataFrames.',
     detail: 'Reconstructing player movement starts with decoding binary packets and changes in game state. The result is data you can inspect, plot, and ask new questions of.',
     nextQuestion: 'What patterns become visible when a whole match is explored as data?',
     stack: ['Python', 'Protocol Buffers', 'pandas', 'Plotly'],
@@ -26,7 +26,7 @@ export const projects: Record<ProjectId, {
   wisp: {
     name: 'Wisp', trail: 'agents', title: ['An agent.', 'In sync.'],
     question: 'How can a coding agent keep its work inspectable?',
-    description: 'A coding agent with resumable sessions, approval controls, and inspectable transcripts. One shared runtime across terminal, RPC, and SDK interfaces.',
+    description: 'An event-driven coding-agent runtime with resumable sessions, explicit approval controls, and inspectable transcripts shared across terminal, RPC, and SDK interfaces.',
     detail: 'Sessions, tool output, and approval controls are part of the working interface. Inspectable transcripts make it possible to follow what happened and pick up the work again.',
     nextQuestion: 'How should a person steer an agent as a task changes?',
     stack: ['Coding agents', 'Session state', 'Tool use', 'RPC / SDK'],
@@ -36,7 +36,7 @@ export const projects: Record<ProjectId, {
   krill: {
     name: 'Krill.jl', trail: 'agents', title: ['Beyond', 'the chat.'],
     question: 'What does an agent need beyond a single conversation?',
-    description: 'A Julia-native agent runtime for Telegram and Discord, with persistent memory, scheduled tasks, MCP tools, and coding-agent delegation.',
+    description: 'A Julia-native agent runtime for Telegram and Discord, combining persistent memory, scheduled tasks, MCP tools, and coding-agent delegation for longer-running work.',
     detail: 'Memory, tools, and scheduled work connect individual conversations to longer-running tasks. Julia provides another environment in which to explore agent architecture.',
     nextQuestion: 'How should memory carry useful context into the next task?',
     stack: ['Julia', 'MCP', 'Persistent memory', 'Delegation'],
@@ -46,7 +46,7 @@ export const projects: Record<ProjectId, {
   opencouch: {
     name: 'OpenCouch', trail: 'agents', title: ['Room to', 'reflect.'],
     question: 'How can an AI companion support reflection over time?',
-    description: 'A pre-beta AI companion for self-reflection and guided wellness exercises, with persistent memory and safety routing.',
+    description: 'A pre-beta companion for guided self-reflection, pairing layered memory and structured wellness exercises with safety-aware routing across web and terminal interfaces.',
     detail: 'Conversation history, layered memory, and guided exercises create continuity between sessions. Safety routing is part of the architecture, alongside a shared backend for web chat and a terminal interface.',
     nextQuestion: 'What should a companion remember, and what should it leave behind?',
     stack: ['Python', 'Agents SDK', 'FastAPI', 'Postgres', 'Next.js'],
@@ -56,7 +56,7 @@ export const projects: Record<ProjectId, {
   nimble: {
     name: 'NimbleAgents.jl', trail: 'agents', title: ['Less setup.', 'More ideas.'],
     question: 'How small can the building blocks of an agent be?',
-    description: 'A lightweight framework for building AI agents in pure Julia, with tool schemas, structured outputs, handoffs, and persistent sessions.',
+    description: 'A lightweight Julia framework for building tool-using agents with generated schemas, structured outputs, persistent sessions, handoffs, and threaded multi-agent workflows.',
     detail: 'A Julia function can become an agent tool through a macro. Typed outputs, agent pipelines, and threaded delegation turn those small pieces into larger workflows.',
     nextQuestion: 'How can a framework stay simple as agents do more together?',
     stack: ['Julia', 'Tool calling', 'Multi-agent workflows', 'MCP'],
@@ -67,7 +67,7 @@ export const projects: Record<ProjectId, {
   quantrl: {
     name: 'QuantRL-Lab', trail: 'learning', title: ['Act. Learn.', 'Try again.'],
     question: 'How does feedback change a decision?',
-    description: 'A Python testbed for reinforcement learning in quantitative trading, with pluggable action, observation, and reward strategies.',
+    description: 'A modular Python testbed for reinforcement learning in quantitative trading, built to compare pluggable action, observation, and reward strategies.',
     detail: 'Changing observations, available actions, or the reward changes the experiment itself. A modular testbed makes those choices explicit and easier to compare.',
     nextQuestion: 'What changes when an agent is rewarded differently?',
     stack: ['Python', 'Reinforcement learning', 'Experiments'],
@@ -77,7 +77,7 @@ export const projects: Record<ProjectId, {
   'fractional-bonds': {
     name: 'Fractional Bond Trading', mapName: 'Fractional bonds', trail: 'systems', title: ['Bonds.', 'In pieces.'],
     question: 'What changes when bond ownership becomes programmable?',
-    description: 'A proof of concept for fractional bond ownership, built with Ethereum smart contracts and a connected web interface.',
+    description: 'An Ethereum proof of concept for fractional bond ownership, covering tokenized issuance, peer-to-peer exchange, coupon payments, pricing oracles, and redemption.',
     detail: 'ERC-20 tokens represent fractions of a bond. Factory and marketplace contracts explore issuance, peer-to-peer exchange, coupon payments, and redemption across the bond lifecycle.',
     nextQuestion: 'How should ownership, permissions, and payments fit together across that lifecycle?',
     stack: ['Solidity', 'Hardhat', 'Next.js', 'Ethers.js', 'Chainlink'],
@@ -87,7 +87,7 @@ export const projects: Record<ProjectId, {
   'shipping-ml': {
     name: 'Shipping ML', trail: 'systems', title: ['Train it.', 'Ship it.'],
     question: 'What does it take to move a model beyond a notebook?',
-    description: 'An end-to-end MLOps reference that uses a toy rental prediction problem to explore training, evaluation, serving, and automated retraining.',
+    description: 'An end-to-end MLOps reference that takes a toy rental model through validation, experiment tracking, serving, automated retraining, and evidence-based promotion.',
     detail: 'Data validation, experiment tracking, and model tuning lead into a FastAPI prediction service. Automated training compares RMSE against a baseline before promoting a model.',
     nextQuestion: 'What evidence should a retrained model need before it replaces the baseline?',
     stack: ['Python', 'FastAPI', 'XGBoost', 'MLflow', 'Docker'],
@@ -97,7 +97,7 @@ export const projects: Record<ProjectId, {
   'mental-gym': {
     name: 'Mental Gym', trail: 'learning', title: ['Stay sharp.', 'Keep going.'],
     question: 'How does solving a problem change the way I approach the next one?',
-    description: 'An ongoing practice log of algorithms, data structures, and problems from LeetCode, Kattis, and HackerRank.',
+    description: 'A hands-on algorithm practice platform combining first-principles solutions, interactive visualizations, and spaced repetition to turn problem-solving notes into lasting understanding.',
     detail: 'Solutions, notes, and data structures built from scratch make the learning process visible. Python, Julia, and C++ offer different ways to reason through the same kinds of problems.',
     nextQuestion: 'Which ideas transfer when the next problem looks unfamiliar?',
     stack: ['Python', 'Julia', 'C++', 'Data structures + algorithms'],
@@ -107,7 +107,7 @@ export const projects: Record<ProjectId, {
   'claude-code-anatomy': {
     name: 'Claude Code Anatomy', mapName: 'Claude Anatomy', trail: 'agents', title: ['Under', 'the hood.'],
     question: 'What actually happens inside a coding agent?',
-    description: 'An independent guide to Claude Code’s internals, tracing the agent loop, tools, memory, sessions and permission model through source-level analysis.',
+    description: 'An independent, source-level guide to Claude Code’s internals, tracing its agent loop, tools, context, sessions, permissions, and architectural trade-offs.',
     detail: 'The guide follows a task through orchestration, tool execution and context management, then connects those pieces to background tasks, extensions and runtime behavior. Architecture comparisons with Google ADK, OpenAI Agents SDK, LangChain and LangGraph help explain the design choices. This is an independent analysis project, not an Anthropic product.',
     nextQuestion: 'Which architecture choices make an agent easier to understand, extend and trust?',
     stack: ['Agent architecture', 'TypeScript', 'Docusaurus', 'Technical writing'],

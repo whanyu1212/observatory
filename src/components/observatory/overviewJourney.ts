@@ -15,7 +15,7 @@ export function useOverviewJourney(root: RefObject<HTMLDivElement | null>, enabl
       journey.current.book = book;
       host.style.setProperty('--universe-departure', departure.toFixed(4));
       host.style.setProperty('--book-arrival', book.toFixed(4));
-      [0, 1, 2].forEach(index => {
+      [0, 1, 2, 3, 4].forEach(index => {
         const star = ease((book - 0.2 - index * 0.13) / 0.42);
         host.style.setProperty(`--contribution-${index}`, star.toFixed(4));
       });
