@@ -54,8 +54,8 @@ function clampPosition(
 function focusAfterDismiss(id: WindowState['id']) {
   window.requestAnimationFrame(() => {
     const dockButton = document.querySelector<HTMLButtonElement>(`[data-dock-app="${id}"]`);
-    const workspaceButton = document.querySelector<HTMLButtonElement>('.obs-workspace-button');
-    (dockButton ?? workspaceButton)?.focus();
+    const soundButton = document.querySelector<HTMLButtonElement>('.obs-sound-control');
+    (dockButton ?? soundButton)?.focus();
   });
 }
 

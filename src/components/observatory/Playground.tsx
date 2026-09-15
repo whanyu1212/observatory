@@ -1,11 +1,10 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Compass, Flag, Move, Pause, Play, Route, X } from 'lucide-react';
+import { ArrowUpRight, Check, Compass, Flag, Move, Pause, Play, X } from 'lucide-react';
 import { projects, type ProjectId } from './curiosity';
 import '@/styles/playground.css';
 
 const ExplorationScene = lazy(() => import('./ExplorationScene').then(module => ({ default: module.ExplorationScene })));
 const projectIds = Object.keys(projects) as ProjectId[];
-const tour: ProjectId[] = ['gem-dota', 'wisp', 'mental-gym'];
 
 interface Props {
   panelProject: ProjectId | null;
@@ -13,17 +12,15 @@ interface Props {
   motionEnabled: boolean;
   onToggleMotion: () => void;
   onSelect: () => void;
-  onReadNotes: (id: ProjectId) => void;
   onViewProject: (id: ProjectId) => void;
 }
 
-export function Playground({ panelProject, active, motionEnabled, onToggleMotion, onSelect, onReadNotes, onViewProject }: Props) {
+export function Playground({ panelProject, active, motionEnabled, onToggleMotion, onSelect, onViewProject }: Props) {
   const [destination, setDestination] = useState<ProjectId | null>(null);
   const [navigationRequest, setNavigationRequest] = useState(0);
   const [arrived, setArrived] = useState<ProjectId | null>(null);
   const [discovered, setDiscovered] = useState<ProjectId[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [tourStep, setTourStep] = useState<number | null>(null);
   const [ready, setReady] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -38,7 +35,7 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
     previousPanel.current = panelProject;
   }, [panelProject, active]);
   useEffect(() => {
-    if (!active) { setArrived(null); setMenuOpen(false); setTourStep(null); }
+    if (!active) { setArrived(null); setMenuOpen(false); }
   }, [active]);
   const go = (id: ProjectId) => {
     setArrived(null);
@@ -60,27 +57,13 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
     setDiscovered(previous => previous.includes(id) ? previous : [...previous, id]);
     onSelect();
   };
-  const startTour = () => { setTourStep(0); go(tour[0]); };
-  const nextStop = () => {
-    const next = (tourStep ?? -1) + 1;
-    if (next >= tour.length) { setTourStep(null); return; }
-    setTourStep(next);
-    go(tour[next]);
-  };
   const project = arrived ? projects[arrived] : null;
 
   return <section ref={sectionRef} className="playground" aria-label="Explore Hanyu's world" data-ready={ready}>
     <div className="playground-intro">
       <p className="obs-mono playground-kicker"><span /> HANYU'S SMALL UNIVERSE</p>
       <h1>Follow your<br /><span>curiosity.</span></h1>
-      <p>I'm Hanyu. An AI builder, data scientist,<br className="playground-desktop-break" /> and <a className="playground-identity-link" href="#open-source">open-source contributor <ArrowUpRight size={12} aria-hidden="true" /></a>.</p>
-      <button className="playground-tour" onClick={startTour}><Route size={15} />{tourStep === null ? 'Take a 3-stop tour' : 'Restart the tour'}<ArrowUpRight size={14} /></button>
-    </div>
-
-    <div className="playground-status">
-      <span className="obs-mono"><Compass size={14} /> EXPLORER / 01</span>
-      <strong>{String(discovered.length).padStart(2, '0')}<span> / {String(projectIds.length).padStart(2, '0')}</span></strong>
-      <span className="obs-mono">FEATURED PROJECTS EXPLORED</span>
+      <p>I'm Hanyu. An AI builder, data scientist,<br className="playground-desktop-break" /> and open-source contributor.</p>
     </div>
 
     <div className="playground-world">
@@ -99,10 +82,8 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
 
     {menuOpen && <div ref={menuRef} id="world-project-menu" className="playground-menu" onKeyDown={event => { if (event.key === 'Escape') { setMenuOpen(false); menuButton.current?.focus(); } }}>
       <div className="playground-menu-heading obs-mono">FEATURED PROJECTS<button aria-label="Close project menu" onClick={() => { setMenuOpen(false); menuButton.current?.focus(); }}><X size={16} /></button></div>
-      {projectIds.map((id, index) => <button key={id} data-project={id} onClick={() => { setTourStep(null); go(id); menuButton.current?.focus(); }}><span className="obs-mono">{String(index + 1).padStart(2, '0')}</span><span>{projects[id].name}</span>{discovered.includes(id) ? <Check size={14} aria-label="Discovered" /> : <ArrowUpRight size={14} />}</button>)}
+      {projectIds.map((id, index) => <button key={id} data-project={id} onClick={() => { go(id); menuButton.current?.focus(); }}><span className="obs-mono">{String(index + 1).padStart(2, '0')}</span><span>{projects[id].name}</span>{discovered.includes(id) ? <Check size={14} aria-label="Discovered" /> : <ArrowUpRight size={14} />}</button>)}
     </div>}
-
-    {tourStep !== null && <div className="playground-tour-progress"><span className="obs-mono">TOUR / {tourStep + 1} OF 3</span><span>{projects[tour[tourStep]].name}</span>{!arrived && !destination && discovered.includes(tour[tourStep]) && <button className="playground-tour-continue" onClick={nextStop}>{tourStep === tour.length - 1 ? 'Finish tour' : 'Next project'}<ArrowUpRight size={14} /></button>}<button aria-label="End guided tour" onClick={() => setTourStep(null)}><X size={14} /></button></div>}
 
     <div className="playground-announcement" role="status" aria-live="polite">{arrived ? `Discovered ${projects[arrived].name}. ${discovered.length} of ${projectIds.length} featured projects explored.` : destination ? `Travelling to ${projects[destination].name}.` : ''}</div>
     {project && arrived && <aside className="playground-discovery" aria-label={`${project.name} discovery`}>
@@ -111,9 +92,7 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
       <p className="playground-description">{project.description}</p>
       <div className="playground-discovery-actions">
         <button className="playground-primary" onClick={() => onViewProject(arrived)}>Explore the project <ArrowUpRight size={14} /></button>
-        <button onClick={() => onReadNotes(arrived)}>Read field notes <ArrowUpRight size={13} /></button>
       </div>
-      {tourStep !== null && arrived === tour[tourStep] && <button className="playground-next" onClick={nextStop}>{tourStep === tour.length - 1 ? 'Finish tour · keep exploring' : 'Next project'}<ArrowUpRight size={14} /></button>}
     </aside>}
   </section>;
 }

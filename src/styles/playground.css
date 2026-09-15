@@ -5,25 +5,15 @@
    bottom to transparent dissolves that seam. Masking the canvas rather than
    .playground-world keeps the overlaid labels and camera toolbar at full opacity. */
 [data-exploration-world] canvas { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 76px, #000 calc(100% - 104px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 76px, #000 calc(100% - 104px), transparent 100%); }
-/* No scale on departure: shrinking the world as the page scrolls reads as a
-   camera zoom-out, and zoom belongs to Ctrl+wheel alone. The lift and fade still
-   hand the stage over to the next section. */
-[data-motion="on"] .playground-world { transform-origin: 50% 70%; transform: translateY(calc(var(--universe-departure, 0) * -36px)); opacity: calc(1 - var(--universe-departure, 0) * .3); }
 .playground-intro { position: relative; z-index: 2; pointer-events: none; padding: 28px 0 0 clamp(24px,4vw,64px); width: fit-content; }
+.observatory[data-motion="on"] .playground[data-ready="false"] .playground-intro { opacity: 0; transform: translateY(12px); }
+.observatory[data-motion="on"] .playground[data-ready="true"] .playground-intro { transition: opacity .55s ease-out, transform .55s ease-out; }
 .playground-kicker { color: var(--obs-muted); display: flex; align-items: center; gap: 8px; }
 .playground-kicker span { width: 5px; height: 5px; border-radius: 50%; background: var(--obs-accent); }
 .playground-intro h1 { margin: 14px 0 14px; font-size: clamp(42px,4.2vw,65px); line-height: .97; letter-spacing: -.065em; font-weight: 500; }
 .playground-intro h1 span { color: var(--obs-accent); }
 .playground-intro > p:not(.playground-kicker) { font-size: 12px; line-height: 1.75; color: var(--obs-muted); }
-.playground-identity-link { pointer-events: auto; display: inline-flex; align-items: center; gap: 4px; color: var(--obs-accent); border-bottom: 1px solid color-mix(in srgb, var(--obs-accent), transparent 60%); }
-.playground-identity-link:hover { border-bottom-color: var(--obs-accent); }
 .playground button { font-family: inherit; }
-.playground-tour { pointer-events: auto; display: flex; gap: 9px; align-items: center; margin-top: 17px; padding: 10px 0; color: var(--obs-ink); border: 0; border-bottom: 1px solid #a4bc944f; background: transparent; font-size: 12px; }
-.playground-status { position: absolute; z-index: 2; top: 32px; right: clamp(24px,4vw,64px); display: grid; gap: 7px; text-align: right; pointer-events: none; }
-.playground-status > span:first-child { display: flex; align-items: center; justify-content: flex-end; gap: 8px; color: var(--obs-accent); }
-.playground-status strong { font-size: 36px; letter-spacing: -.07em; font-weight: 400; }
-.playground-status strong span { font-size: 18px; color: #758b85; }
-.playground-status > span:nth-of-type(2) { font-size: 8px; color: var(--obs-muted); }
 .playground-badge { color: var(--obs-accent); font-size: 10px; display: flex; gap: 5px; justify-content: end; }
 .playground-bottom { position: absolute; z-index: 3; bottom: 20px; left: clamp(24px,4vw,64px); right: clamp(24px,4vw,64px); display: flex; justify-content: space-between; align-items: center; gap: 18px; }
 .playground-controls { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #d9f99170; border-radius: 9px; background: linear-gradient(120deg,#27372bf2,#101b24f2); box-shadow: 0 0 24px #d9f9910d; backdrop-filter: blur(12px); color: #c8d5ce; font-size: 11px; }
@@ -38,14 +28,11 @@
 .playground-actions button[aria-expanded='true'] { border-color: var(--obs-accent); }
 .playground-menu { position: absolute; z-index: 7; bottom: 75px; right: clamp(24px,4vw,64px); width: 300px; max-width: calc(100% - 32px); max-height: min(520px, calc(100% - 140px)); overflow-y: auto; overscroll-behavior: contain; background: #111e1df5; border: 1px solid #718c705e; border-radius: 10px; padding: 12px; box-shadow: 0 16px 80px #0008; backdrop-filter: blur(24px); }
 .playground-menu-heading { display: flex; align-items: center; justify-content: space-between; color: var(--obs-muted); padding: 3px 9px 10px; }
-.playground-menu-heading button,.playground-discovery-top button,.playground-tour-progress button { border: 0; color: var(--obs-muted); background: none; padding: 5px; display: flex; }
+.playground-menu-heading button,.playground-discovery-top button { border: 0; color: var(--obs-muted); background: none; padding: 5px; display: flex; }
 .playground-menu > button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; color: var(--obs-ink); background: none; border: 0; border-radius: 4px; text-align: left; font-size: 12px; }
 .playground-menu > button:hover { background: #d9f99112; }
 .playground-menu > button span:first-child { color: #8caa80; }
 .playground-menu > button svg { margin-left: auto; color: var(--obs-accent); }
-.playground-tour-progress { position: absolute; left: 50%; top: 24px; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 14px; width: max-content; max-width: calc(100% - 32px); border: 1px solid #6c82634f; border-radius: 20px; background: #14211ee6; padding: 7px 10px 7px 16px; font-size: 12px; }
-.playground-tour-progress > span:first-child { font-size: 12px; color: var(--obs-accent); }
-.playground-tour-progress .playground-tour-continue { min-height: 36px; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 14px; color: var(--obs-accent); background: #d9f99112; font-size: 14px; }
 .playground-discovery { position: absolute; z-index: 5; right: clamp(24px,4vw,64px); bottom: 86px; width: 350px; max-width: calc(100% - 40px); border: 1px solid #a4bc9466; border-radius: 12px; padding: 20px; background: linear-gradient(140deg,#21312cf5,#101a1af5); backdrop-filter: blur(24px); box-shadow: 0 16px 70px #0007; }
 .playground-discovery-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
 .playground-discovery-top > span { display: flex; align-items: center; gap: 7px; color: var(--obs-accent); font-size: 8px; }
@@ -55,7 +42,6 @@
 .playground-discovery-actions { display: flex; align-items: center; gap: 12px; margin-top: 19px; flex-wrap: wrap; }
 .playground-discovery-actions button { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--obs-ink); background: none; border: 0; padding: 8px 0; }
 .playground-discovery-actions .playground-primary { background: var(--obs-accent); color: #14201a; padding: 11px 13px; border-radius: 4px; font-weight: 600; }
-.playground-next { display: flex; width: 100%; justify-content: space-between; align-items: center; border: 0; border-top: 1px solid #a3bb9133; margin-top: 16px; padding: 13px 0 0; background: none; color: var(--obs-accent); font-size: 11px; }
 .playground-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .playground-loading { display: grid; height: 100%; place-items: center; color: var(--obs-muted); font-family: var(--font-mono); font-size: 12px; }
 .playground-challenge-loading { position: fixed; inset: 0; background: #0a1012ef; z-index: 200; display: flex; align-items: center; justify-content: center; gap: 20px; }
@@ -67,10 +53,6 @@
   .playground-intro h1 { font-size: 46px; margin-top: 13px; }
   .playground-intro > p:not(.playground-kicker) { font-size: 11px; }
   .playground-kicker { font-size: 8px; }
-  .playground-status { top: 31px; right: 24px; gap: 5px; }
-  .playground-status > span:first-child { font-size: 8px; }
-  .playground-status > span:nth-of-type(2) { max-width: 95px; line-height: 1.5; font-size: 7px; }
-  .playground-status strong { font-size: 30px; }
   .playground-world { inset: 245px 0 112px; }
   .playground-bottom { bottom: 16px; flex-direction: column; align-items: stretch; gap: 10px; left: 24px; right: 24px; }
   .playground-controls { font-size: 10px; justify-content: center; padding: 7px 10px; gap: 10px; }
@@ -80,7 +62,6 @@
   .playground-actions button svg { flex-shrink: 0; }
   .playground-menu { bottom: 110px; right: 20px; }
   .playground-discovery { bottom: 115px; right: 20px; padding: 18px; }
-  .playground-tour-progress { top: 249px; padding: 6px 8px 6px 12px; gap: 8px; max-width: calc(100% - 32px); }
 }
 @media (pointer: coarse) { .playground-orbit-hint { display: none; } .playground-touch-hint { display: inline; } }
-@media (max-width: 370px) { .playground-intro h1 { font-size: 41px; } .playground-status { right: 18px; } .playground-status > span:first-child { font-size: 7px; } .playground-intro { padding-left: 20px; } .playground-status > span:first-child svg { display: none; } }
+@media (max-width: 370px) { .playground-intro h1 { font-size: 41px; } .playground-intro { padding-left: 20px; } }

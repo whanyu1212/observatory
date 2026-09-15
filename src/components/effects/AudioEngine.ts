@@ -33,34 +33,33 @@ class CyberAudioEngine {
 
       const ctx = this.ctx;
 
-      // Primary low drone
+      // Two soft sine tones form a stable fifth without the buzz of a sawtooth drone.
       const osc = ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(52, ctx.currentTime); // ~G#1
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(65.41, ctx.currentTime); // C2
 
-      // Sub-bass sine underneath for depth
       const subOsc = ctx.createOscillator();
       subOsc.type = 'sine';
-      subOsc.frequency.setValueAtTime(26, ctx.currentTime);
+      subOsc.frequency.setValueAtTime(98, ctx.currentTime); // G2
 
-      // Slow LFO to give the hum a breathing quality
+      // Barely perceptible pitch movement keeps the pad from feeling mechanical.
       const lfo = ctx.createOscillator();
       lfo.type = 'sine';
-      lfo.frequency.setValueAtTime(0.12, ctx.currentTime);
+      lfo.frequency.setValueAtTime(0.08, ctx.currentTime);
 
       const lfoGain = ctx.createGain();
-      lfoGain.gain.setValueAtTime(6, ctx.currentTime);
+      lfoGain.gain.setValueAtTime(0.35, ctx.currentTime);
       lfo.connect(lfoGain);
       lfoGain.connect(osc.frequency);
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(160, ctx.currentTime);
-      filter.Q.setValueAtTime(0.8, ctx.currentTime);
+      filter.frequency.setValueAtTime(220, ctx.currentTime);
+      filter.Q.setValueAtTime(0.45, ctx.currentTime);
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.014, ctx.currentTime + 2.5);
+      gain.gain.linearRampToValueAtTime(0.011, ctx.currentTime + 4);
 
       osc.connect(filter);
       subOsc.connect(filter);

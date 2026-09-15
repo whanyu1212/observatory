@@ -121,9 +121,6 @@
 .career-degrees article > span { color: var(--obs-accent); font: 12px/1.6 'IBM Plex Mono', monospace; }
 .career-degrees h3 { margin: 15px 0 12px; max-width: 340px; font-size: 23px; font-weight: 450; line-height: 1.25; letter-spacing: -.03em; }
 .career-degrees p { color: var(--obs-muted); font-size: 13px; line-height: 1.6; }
-.experience-outro { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px; padding: 35px 0 0; border-top: 1px solid var(--obs-line); }
-.experience-outro > p { color: var(--obs-muted); font-size: 16px; line-height: 1.6; }
-.experience-outro button { display: flex; align-items: center; gap: 15px; min-height: 48px; padding: 12px 18px; border: 1px solid var(--obs-accent); border-radius: 3px; background: var(--obs-accent); color: var(--obs-bg); font-size: 14px; font-weight: 500; }
 
 @media (prefers-reduced-motion: no-preference) {
   .observatory[data-motion='on'] .experience:not([hidden]) .experience-intro { animation: experience-arrive .6s both; }

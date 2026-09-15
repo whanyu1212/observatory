@@ -45,19 +45,10 @@
 }
 .obs-starfield__star:nth-of-type(11n + 2)::after { transform: translate(-50%, -50%) rotate(90deg); }
 
-/* Only a sparse subset animates. Every animated star becomes its own compositor
-   layer, and 235 of them cost the compositor more per frame than the WebGL scene
-   they sit over. will-change is omitted deliberately: it forced those layers even
-   before an animation ran. A handful of moving stars reads as a living sky. */
-.obs-starfield.is-moving .obs-starfield__star:nth-of-type(12n + 5) {
-  animation:
-    obs-star-drift var(--star-duration) var(--star-delay) ease-in-out infinite alternate,
-    obs-star-twinkle var(--star-twinkle-duration) var(--star-twinkle-delay) ease-in-out infinite;
-}
-
-@keyframes obs-star-drift {
-  from { transform: translate3d(0, var(--star-drift-start), 0); }
-  to { transform: translate3d(var(--star-drift), var(--star-drift-end), 0); }
+/* Keep continuous animation sparse and opacity-only so the WebGL scene retains
+   the frame budget. Across both page layers this selects roughly eight stars. */
+.obs-starfield.is-moving .obs-starfield__star:nth-of-type(29n + 5) {
+  animation: obs-star-twinkle var(--star-twinkle-duration) var(--star-twinkle-delay) ease-in-out infinite;
 }
 
 @keyframes obs-star-twinkle {

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '@nanostores/react';
-import { ArrowUpRight, AudioLines, BookOpen, Command, Contact, GitBranch, Mail, VolumeX } from 'lucide-react';
-import { $audioEnabled, $theme, $windows, minimizeApp, openApp } from '@/stores/osStore';
+import { ArrowUpRight, AudioLines, BookOpen, Contact, GitBranch, Mail, VolumeX } from 'lucide-react';
+import { $audioEnabled, $theme, $windows, minimizeApp } from '@/stores/osStore';
 import { soundEffects } from '@/components/effects/AudioEngine';
 import { Desktop } from '@/components/os/Desktop';
 import { Dock } from '@/components/os/Dock';
@@ -9,27 +9,22 @@ import { Playground } from './Playground';
 import { BackgroundStars } from './BackgroundStars';
 import { MeteorShower } from './MeteorShower';
 import { OpenSource } from './OpenSource';
-import { FieldNotesPanel } from './FieldNotesPanel';
 import { ProjectPanel } from './ProjectPanel';
 import { ExperiencePage } from './ExperiencePage';
-import { useOverviewJourney } from './overviewJourney';
 import type { ProjectId } from './curiosity';
 
 type Section = 'overview' | 'experience' | 'about';
 type Direction = 'orbital' | 'signal' | 'blueprint';
 
-export function Observatory({ projectImage }: { projectImage: string }) {
+export function Observatory() {
   const [section, setSection] = useState<Section>('overview');
   const [direction, setDirection] = useState<Direction>('orbital');
-  const [notesProject, setNotesProject] = useState<ProjectId | null>(null);
   const [projectPanel, setProjectPanel] = useState<ProjectId | null>(null);
   const [motionChoice, setMotionChoice] = useState<boolean | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const audioOn = useStore($audioEnabled);
   const contentRef = useRef<HTMLDivElement>(null);
-  const observatoryRef = useRef<HTMLDivElement>(null);
   const motionEnabled = motionChoice ?? !reducedMotion;
-  const overviewJourney = useOverviewJourney(observatoryRef, section === 'overview', motionEnabled);
   const toggleMotion = () => {
     const next = !motionEnabled;
     setMotionChoice(next);
@@ -37,6 +32,12 @@ export function Observatory({ projectImage }: { projectImage: string }) {
   };
 
   useEffect(() => {
+    try {
+      const savedAudio = localStorage.getItem('hanyu:audio');
+      if (savedAudio === 'on' || savedAudio === 'off') $audioEnabled.set(savedAudio === 'on');
+    } catch { /* Keep sound enabled by default when storage is unavailable. */ }
+    soundEffects.attachAmbientOnFirstInteraction();
+
     try {
       const saved = localStorage.getItem('hanyu:motion');
       if (saved === 'on' || saved === 'off') setMotionChoice(saved === 'on');
@@ -53,7 +54,6 @@ export function Observatory({ projectImage }: { projectImage: string }) {
       const hash = window.location.hash.slice(1);
       const next: Section = hash === 'experience' || hash === 'about' ? hash : hash === 'work' ? 'experience' : 'overview';
       setSection(next);
-      setNotesProject(null);
       setProjectPanel(null);
       if (hash === 'work') window.history.replaceState(null, '', '#experience');
     };
@@ -78,7 +78,6 @@ export function Observatory({ projectImage }: { projectImage: string }) {
       if (win.isOpen && !win.isMinimized) minimizeApp(win.id);
     });
     setSection(next);
-    setNotesProject(null);
     setProjectPanel(null);
     window.history.pushState(null, '', `#${next}`);
     soundEffects.playBlip(680, .04);
@@ -86,8 +85,10 @@ export function Observatory({ projectImage }: { projectImage: string }) {
   };
 
   const toggleAudio = () => {
-    $audioEnabled.set(!audioOn);
-    if (!audioOn) { soundEffects.startAmbientHum(); soundEffects.playEngage(); }
+    const next = !audioOn;
+    $audioEnabled.set(next);
+    try { localStorage.setItem('hanyu:audio', next ? 'on' : 'off'); } catch { /* The control still works when storage is unavailable. */ }
+    if (next) { soundEffects.startAmbientHum(); soundEffects.playEngage(); }
     else soundEffects.stopAmbientHum();
   };
 
@@ -95,19 +96,12 @@ export function Observatory({ projectImage }: { projectImage: string }) {
     soundEffects.playBlip(740, .04);
   };
 
-  const revealProject = (id: ProjectId) => {
-    playProjectSound();
-    setProjectPanel(null);
-    setNotesProject(id);
-  };
-
   const openProject = (id: ProjectId) => {
     playProjectSound();
-    setNotesProject(null);
     setProjectPanel(id);
   };
   return (
-    <div ref={observatoryRef} className="observatory" data-direction={direction} data-motion={motionEnabled ? 'on' : 'off'}>
+    <div className="observatory" data-direction={direction} data-motion={motionEnabled ? 'on' : 'off'}>
       <BackgroundStars motionEnabled={motionEnabled} />
       <MeteorShower motionEnabled={motionEnabled} />
       <a href="#portfolio-content" className="obs-skip-link">Skip to content</a>
@@ -117,16 +111,15 @@ export function Observatory({ projectImage }: { projectImage: string }) {
         </nav>
         <div className="obs-header-actions">
           <button type="button" className="obs-sound-control" onClick={toggleAudio} aria-label={audioOn ? 'Mute sound' : 'Enable sound'} aria-pressed={audioOn}>{audioOn ? <AudioLines size={16} /> : <VolumeX size={16} />}<span className="obs-mono">SOUND {audioOn ? 'ON' : 'OFF'}</span></button>
-          <button type="button" className="obs-workspace-button" aria-label="Open workspace" onClick={() => openApp('terminal')}><Command size={14} /><span>Workspace</span><ArrowUpRight size={14} /></button>
         </div>
       </header>
 
       <main id="portfolio-content" className="obs-main">
         <div ref={contentRef} className="obs-content-focus" tabIndex={-1}>
         <div hidden={section !== 'overview'}>
-          <Playground panelProject={projectPanel ?? notesProject} active={section === 'overview'} motionEnabled={motionEnabled && section === 'overview'} onToggleMotion={toggleMotion} onSelect={playProjectSound} onReadNotes={revealProject} onViewProject={openProject} />
+          <Playground panelProject={projectPanel} active={section === 'overview'} motionEnabled={motionEnabled && section === 'overview'} onToggleMotion={toggleMotion} onSelect={playProjectSound} onViewProject={openProject} />
         </div>
-        <ExperiencePage hidden={section !== 'experience'} motionEnabled={motionEnabled} onExplore={() => navigate('overview')} />
+        <ExperiencePage hidden={section !== 'experience'} motionEnabled={motionEnabled} />
         <section className="obs-about-profile" hidden={section !== 'about'} aria-labelledby="about-title">
           <p className="obs-eyebrow obs-mono"><span />ABOUT / SINGAPORE</p>
           <h1 id="about-title">I'm Hanyu.<br /><span>I learn by building.</span></h1>
@@ -202,7 +195,7 @@ export function Observatory({ projectImage }: { projectImage: string }) {
         </section>
         </div>
 
-        {section === 'overview' && <OpenSource motionEnabled={motionEnabled} journey={overviewJourney} />}
+        {section === 'overview' && <OpenSource />}
 
       </main>
 
@@ -211,8 +204,7 @@ export function Observatory({ projectImage }: { projectImage: string }) {
         <a className="obs-footer-contact obs-mono" href="mailto:whanyu47@gmail.com">LET'S CONNECT <ArrowUpRight size={14} /></a>
       </footer>
       <Desktop /><Dock />
-      {projectPanel && <ProjectPanel projectId={projectPanel} motionEnabled={motionEnabled} onClose={() => setProjectPanel(null)} onReadNotes={revealProject} />}
-      {notesProject && <FieldNotesPanel projectId={notesProject} projectImage={projectImage} motionEnabled={motionEnabled} onClose={() => setNotesProject(null)} />}
+      {projectPanel && <ProjectPanel projectId={projectPanel} motionEnabled={motionEnabled} onClose={() => setProjectPanel(null)} />}
     </div>
   );
 }

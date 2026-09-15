@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUpRight, ChevronDown, GitBranch, GraduationCap } from 'lucide-react';
+import { ArrowDown, ChevronDown, GitBranch, GraduationCap } from 'lucide-react';
 import { AgentWorkflow } from './AgentWorkflow';
 import '@/styles/experience.css';
 
@@ -61,9 +61,9 @@ const career = [
 
 const chapters = [...career.map(({ id, shortName, period }) => ({ id, label: shortName, detail: period })), { id: 'education', label: 'Education', detail: 'National University of Singapore' }];
 
-interface Props { hidden: boolean; motionEnabled: boolean; onExplore: () => void }
+interface Props { hidden: boolean; motionEnabled: boolean }
 
-export function ExperiencePage({ hidden, motionEnabled, onExplore }: Props) {
+export function ExperiencePage({ hidden, motionEnabled }: Props) {
   const rootRef = useRef<HTMLElement>(null);
   const [activeChapter, setActiveChapter] = useState('micron');
 
@@ -177,7 +177,6 @@ export function ExperiencePage({ hidden, motionEnabled, onExplore }: Props) {
           </div>
         </section>
 
-        <footer className="experience-outro"><p>The next question is already taking shape.</p><button onClick={onExplore}>Explore my projects <ArrowUpRight size={18} aria-hidden="true" /></button></footer>
       </div>
     </div>
   </section>;

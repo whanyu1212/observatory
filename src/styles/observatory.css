@@ -67,8 +67,6 @@ body.app-shell { margin: 0; overflow-x: clip; background: var(--obs-bg); color: 
 .obs-header-actions { display: flex; align-items: center; gap: 22px; }
 .obs-sound-control { display: flex; align-items: center; gap: 8px; border: 0; padding: 8px 0; background: none; color: var(--obs-muted); }
 .obs-sound-control[aria-pressed='true'] { color: var(--obs-accent); }
-.obs-workspace-button { display: flex; align-items: center; gap: 9px; border: 1px solid var(--obs-line); background: transparent; color: var(--obs-ink); border-radius: 3px; padding: 10px 13px; font-size: 11px; transition: border-color .2s; }
-.obs-workspace-button:hover { border-color: var(--obs-accent); }
 .obs-main { max-width: 1600px; margin: 0 auto; }
 .obs-hero { display: grid; grid-template-columns: 32% 68%; min-height: min(620px, calc(100svh - 245px)); }
 .obs-copy { padding: clamp(35px,4vw,62px) 12px 40px clamp(24px,4vw,64px); position: relative; z-index: 1; min-width: 0; align-self: center; outline: none; }
@@ -213,8 +211,6 @@ body.app-shell { margin: 0; overflow-x: clip; background: var(--obs-bg); color: 
   .obs-header { flex-wrap: nowrap; padding: 18px 24px; gap: 12px; }
   .obs-nav { gap: 14px; }
   .obs-nav a { font-size: 11px; white-space: nowrap; }
-  .obs-workspace-button { width: 36px; height: 36px; justify-content: center; padding: 0; }
-  .obs-workspace-button > span, .obs-workspace-button > svg:last-child { display: none; }
   .obs-header-actions { margin-left: auto; }
   .obs-hero { grid-template-columns: 1fr; }
   .obs-copy { padding: 36px 24px 10px; }
@@ -238,7 +234,6 @@ body.app-shell { margin: 0; overflow-x: clip; background: var(--obs-bg); color: 
 @media (max-width:420px) {
   .obs-header { padding: 18px 20px 13px; gap: 16px; }
   .obs-header-actions { gap: 10px; }
-  .obs-workspace-button { gap: 6px; padding: 9px; font-size: 10px; }
   .obs-headline { font-size: 18vw; }
   .obs-tagline { font-size: 22px; }
   .obs-work-title { font-size: clamp(44px,13.5vw,56px); }

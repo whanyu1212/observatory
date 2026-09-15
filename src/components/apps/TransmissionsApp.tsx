@@ -19,7 +19,7 @@ const BUILD_NOTES = [
   },
   {
     title: 'Map of curiosity',
-    detail: 'An interactive SVG map connects interests to real projects. Selecting a project opens its question and experiment notes.',
+    detail: 'An interactive SVG map connects interests to real projects. Selecting a project opens its question and repository gallery.',
     icon: ScanLine,
   },
   {

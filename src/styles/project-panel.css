@@ -50,10 +50,8 @@
 .project-panel__preview img { display: block; width: 100%; height: auto; background: #080d14; }
 .project-panel__preview figcaption { padding: 12px 14px; color: var(--obs-muted); font: 11px/1.5 'IBM Plex Mono', monospace; }
 .project-panel__footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; padding-top: 28px; border-top: 1px solid var(--obs-line); }
-.project-panel__footer button,
 .project-panel__footer a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 0; background: transparent; color: var(--obs-accent); font: 12px/1.5 'IBM Plex Mono', monospace; text-decoration: none; }
 .project-panel__footer .is-primary { padding: 0 15px; background: var(--obs-accent); color: var(--obs-bg); }
-.project-panel__footer button:hover,
 .project-panel__footer a:not(.is-primary):hover { color: var(--obs-ink); }
 
 

@@ -16,7 +16,7 @@ export interface WindowState {
 export type SpectrumTheme = 'observatory' | 'polar' | 'ultraviolet' | 'ember' | 'monochrome';
 
 export const $theme = atom<SpectrumTheme>('observatory');
-export const $audioEnabled = atom<boolean>(false);
+export const $audioEnabled = atom<boolean>(true);
 export const $activeWindow = atom<AppId | null>(null);
 
 export const $windows = map<Record<AppId, WindowState>>({

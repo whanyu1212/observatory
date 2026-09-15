@@ -1,6 +1,6 @@
 import React, { useId } from 'react';
 import { useProjectDialog } from './useProjectDialog';
-import { ArrowUpRight, BookOpen, X } from 'lucide-react';
+import { ArrowUpRight, X } from 'lucide-react';
 import { projects, trails, type ProjectId } from './curiosity';
 import '@/styles/project-panel.css';
 
@@ -8,10 +8,9 @@ interface ProjectPanelProps {
   projectId: ProjectId;
   motionEnabled: boolean;
   onClose: () => void;
-  onReadNotes: (id: ProjectId) => void;
 }
 
-export function ProjectPanel({ projectId, motionEnabled, onClose, onReadNotes }: ProjectPanelProps) {
+export function ProjectPanel({ projectId, motionEnabled, onClose }: ProjectPanelProps) {
   const { dialogRef, closeButtonRef, requestClose, dialogEvents } = useProjectDialog(projectId, motionEnabled, onClose);
   const titleId = useId();
   const descriptionId = useId();
@@ -57,7 +56,6 @@ export function ProjectPanel({ projectId, motionEnabled, onClose, onReadNotes }:
           </section>
 
           <footer className="project-panel__footer">
-            <button type="button" onClick={() => requestClose(() => onReadNotes(projectId))}><BookOpen size={16} aria-hidden="true" /> Read field notes</button>
             <a className="is-primary" href={project.repository} target="_blank" rel="noreferrer">View on GitHub <ArrowUpRight size={16} aria-hidden="true" /></a>
             {project.docs && <a href={project.docs} target="_blank" rel="noreferrer">Read the docs <ArrowUpRight size={15} aria-hidden="true" /></a>}
           </footer>

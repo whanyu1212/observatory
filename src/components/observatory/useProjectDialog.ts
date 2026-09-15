@@ -17,7 +17,7 @@ function islandOrigin(projectId: ProjectId) {
 }
 
 /** Keep the native modal and scroll lock alive until its return animation finishes. */
-export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, onClose: () => void, notebook = false) {
+export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, onClose: () => void) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const animationRef = useRef<Animation | null>(null);
@@ -35,11 +35,11 @@ export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, o
     const dx = origin.x - (window.innerWidth - width / 2);
     const dy = origin.y - height / 2;
     return {
-      transform: `translate(${dx}px, ${dy}px) scale(.08)${notebook ? ' rotate(-7deg)' : ''}`,
+      transform: `translate(${dx}px, ${dy}px) scale(.08)`,
       opacity: 0,
       borderRadius: '48px',
     };
-  }, [projectId, notebook]);
+  }, [projectId]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -54,7 +54,7 @@ export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, o
 
     if (optionsRef.current.motionEnabled && typeof dialog.animate === 'function') {
       const animation = dialog.animate([collapsedFrame(), { transform: 'none', opacity: 1, borderRadius: '0px' }], {
-        duration: notebook ? 580 : 520, easing: 'cubic-bezier(.22, 1, .36, 1)',
+        duration: 520, easing: 'cubic-bezier(.22, 1, .36, 1)',
       });
       animationRef.current = animation;
       animation.onfinish = () => { dialog.dataset.phase = 'open'; animationRef.current = null; };
@@ -75,7 +75,7 @@ export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, o
     if (!motionEnabled) animationRef.current?.finish();
   }, [motionEnabled]);
 
-  const requestClose = useCallback((afterClose?: () => void) => {
+  const requestClose = useCallback(() => {
     const dialog = dialogRef.current;
     if (!dialog || closingRef.current) return;
     closingRef.current = true;
@@ -87,9 +87,7 @@ export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, o
     dialog.dataset.phase = 'closing';
     const finish = () => {
       // Retain the finished animation so unmount cleanup releases its fill state.
-      // One callback owns the handoff; React keeps the same selected island ID.
-      if (afterClose) afterClose();
-      else optionsRef.current.onClose();
+      optionsRef.current.onClose();
     };
     if (!optionsRef.current.motionEnabled || typeof dialog.animate !== 'function') return finish();
     const animation = dialog.animate([from, collapsedFrame()], {

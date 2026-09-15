@@ -1,12 +1,8 @@
 ---
 import HUDLayout from '@/layouts/HUDLayout.astro';
-import { getImage } from 'astro:assets';
-import gemPreview from '../assets/gem-dota-preview.png';
 import { Observatory } from '@/components/observatory/Observatory';
-
-const preview = await getImage({ src: gemPreview, width: 1120, format: 'webp' });
 ---
 
 <HUDLayout title="Hanyu Wu — The Observatory">
-  <Observatory client:load projectImage={preview.src} />
+  <Observatory client:load />
 </HUDLayout>

@@ -134,7 +134,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     camera.position.set(17, 18, 22);
     scene.add(camera);
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth < 700 ? 1.5 : 1.75));
     renderer.setClearColor(0x061012, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -179,7 +179,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     const sun = new THREE.DirectionalLight(0xfff5db, 4.4);
     sun.position.set(-12, 22, 14);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1536, 1536);
+    sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.left = -18;
     sun.shadow.camera.right = 18;
     sun.shadow.camera.top = 15;
@@ -235,8 +235,19 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         journey.focus(point, THREE.MathUtils.clamp(controls.getDistance() * 0.76, controls.minDistance, compact ? 26 : 23));
       } else journey.restore();
     };
-    const interruptJourney = () => journey.interrupt();
+    const interruptJourney = () => {
+      interactiveUntil = performance.now() + 900;
+      nextRenderAt = 0;
+      journey.interrupt();
+    };
+    const continueInteraction = () => { nextRenderAt = 0; };
+    const finishInteraction = () => {
+      interactiveUntil = performance.now() + 350;
+      nextRenderAt = 0;
+    };
     controls.addEventListener('start', interruptJourney);
+    controls.addEventListener('change', continueInteraction);
+    controls.addEventListener('end', finishInteraction);
 
     const atmosphere = createUniverseAtmosphere(renderer.getPixelRatio());
     scene.add(atmosphere.object);
@@ -262,6 +273,10 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     let height = 1;
     let compact = false;
     let lastTime = performance.now();
+    let nextRenderAt = 0;
+    let interactiveUntil = 0;
+    let wasInteractive = false;
+    let renderPixelRatio = renderer.getPixelRatio();
     let lastPositionStamp = '';
     // With motion paused the scene is static, so the loop keeps ticking but only
     // pays for a draw when this signature of the visible state actually changes.
@@ -270,9 +285,9 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     const activePointers = new Set<number>();
     let tapGesture: { pointerId: number; x: number; y: number; moved: number; multi: boolean; button: number } | null = null;
     let introBounds = { left: 0, top: 0, right: 0, bottom: 0 };
-    let statusBounds = { left: 0, top: 0, right: 0, bottom: 0 };
 
     const setWaypoint = (id: ProjectId) => {
+      nextRenderAt = 0;
       targetProject = id;
       target.copy(WORLD_POINTS[id]);
       const approach = new THREE.Vector3(-target.x, 0, -target.z);
@@ -352,10 +367,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         : [
             { left: Math.max(0, rect.width - 260), top: Math.max(0, rect.height - 62), right: rect.width, bottom: rect.height },
           ];
-      if (!compact) {
-        if (introBounds.right > 0 && introBounds.bottom > 0) occupied.push(introBounds);
-        if (statusBounds.left > 0 && statusBounds.bottom > 0) occupied.push(statusBounds);
-      }
+      if (!compact && introBounds.right > 0 && introBounds.bottom > 0) occupied.push(introBounds);
       const verticalOffsets = [0, -36, 36, -72, 72, -108, 108];
       const horizontalOffsets = [0, 54, -54, 92, -92, 130, -130];
       candidates.forEach(({ id, button, onScreen, sourceX, sourceY, width: labelWidth, height: labelHeight }) => {
@@ -427,21 +439,6 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           introBounds = { left: 0, top: 0, right: 0, bottom: 0 };
         }
       }
-      const status = host.closest('.playground')?.querySelector<HTMLElement>('.playground-status');
-      if (status) {
-        const statusRect = status.getBoundingClientRect();
-        const bottom = statusRect.bottom - hostRect.top;
-        if (bottom > 0) {
-          statusBounds = {
-            left: Math.max(0, statusRect.left - hostRect.left - 12),
-            top: 0,
-            right: rect.width,
-            bottom: bottom + 10,
-          };
-        } else {
-          statusBounds = { left: 0, top: 0, right: 0, bottom: 0 };
-        }
-      }
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       camera.fov = compact ? 54 : width / height < 1.15 ? 47 : 41;
@@ -464,7 +461,25 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
 
     const render = (now: number, force = false) => {
       if (disposed || (!force && (!visible || !documentVisible))) return;
-      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+      const interactive = keys.size > 0 || activePointers.size > 0 || target.distanceToSquared(current) > .01 || now < interactiveUntil;
+      const needsFrame = interactive || hoverPending;
+      if (interactive !== wasInteractive) {
+        wasInteractive = interactive;
+        const nextPixelRatio = Math.min(window.devicePixelRatio || 1, compact ? (interactive ? 1.25 : 1.5) : (interactive ? 1.5 : 1.75));
+        if (nextPixelRatio !== renderPixelRatio) {
+          renderPixelRatio = nextPixelRatio;
+          renderer.setPixelRatio(renderPixelRatio);
+          renderer.setSize(width, height, false);
+        }
+        nextRenderAt = 0;
+      }
+      const frameInterval = motionRef.current && needsFrame ? 1000 / 30 : Number.POSITIVE_INFINITY;
+      if (!force && now < nextRenderAt) {
+        frame = requestAnimationFrame(render);
+        return;
+      }
+      nextRenderAt = now + frameInterval;
+      const dt = Math.min(0.08, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
       const forwardInput = (keys.has('arrowup') || keys.has('w') ? 1 : 0) - (keys.has('arrowdown') || keys.has('s') ? 1 : 0);
       const rightInput = (keys.has('arrowright') || keys.has('d') ? 1 : 0) - (keys.has('arrowleft') || keys.has('a') ? 1 : 0);
@@ -638,6 +653,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     };
 
     const onPointerDown = (event: PointerEvent) => {
+      nextRenderAt = 0;
       hoveredProject = null;
       hoverPending = false;
       activePointers.add(event.pointerId);
@@ -649,6 +665,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     };
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerType === 'mouse' && activePointers.size === 0) {
+        nextRenderAt = 0;
         const rect = renderer.domElement.getBoundingClientRect();
         hoverPointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
         hoverPending = true;
@@ -694,10 +711,16 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       if (tapGesture) tapGesture.multi = true;
       if (tapGesture?.pointerId === event.pointerId) tapGesture = null;
     };
-    const onPointerLeave = () => { hoveredProject = null; hoverPending = false; renderer.domElement.style.cursor = 'grab'; };
+    const onPointerLeave = () => {
+      hoveredProject = null;
+      hoverPending = false;
+      interactiveUntil = performance.now() + 250;
+      renderer.domElement.style.cursor = 'grab';
+    };
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(key)) {
+        nextRenderAt = 0;
         if (key.startsWith('arrow')) event.preventDefault();
         if (!event.repeat) {
           cameraForward.copy(controls.target).sub(camera.position).setY(0);
@@ -763,6 +786,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       cameraActionsRef.current = emptyCameraActions;
       focusRef.current = () => undefined;
       controls.removeEventListener('start', interruptJourney);
+      controls.removeEventListener('change', continueInteraction);
+      controls.removeEventListener('end', finishInteraction);
       controls.dispose();
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
@@ -856,6 +881,11 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         }
         .world-camera-toolbar button:hover { border-color: rgba(217,249,145,.6); background: rgba(217,249,145,.1); }
         .world-camera-toolbar button:focus-visible { outline: 1px solid #d9f991; outline-offset: 2px; }
+        .world-project-label:hover,
+        .world-project-label:focus-visible {
+          border-color: #d9f991 !important;
+          background: rgba(20,31,32,.96) !important;
+        }
         .world-touch-hint { display: none; }
         .world-destination-legend { display: none; }
         @media (max-width: 700px) {
