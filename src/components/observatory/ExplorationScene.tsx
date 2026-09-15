@@ -148,7 +148,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     host.prepend(renderer.domElement);
 
     const homeTarget = new THREE.Vector3(0, 0.8, 0);
-    const homeDirection = new THREE.Vector3(15, 23, 21).normalize();
+    const homeDirection = new THREE.Vector3(15, 14, 21).normalize();
     let homeDistance = 30.5;
     camera.position.copy(homeTarget).addScaledVector(homeDirection, homeDistance);
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -251,7 +251,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     const keys = new Set<string>();
     let targetProject: ProjectId | null = null;
     let arrivedAt: ProjectId | null = null;
-    let heading = 0;
+    const forwardAxis = new THREE.Vector3(1, 0, 0);
+    const explorerTargetQuat = new THREE.Quaternion();
     let animationTime = 0;
     let frame = 0;
     let visible = true;
@@ -442,13 +443,13 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         clampFlight();
         current.y = THREE.MathUtils.damp(current.y, cruiseElevation(), 5, dt);
         target.copy(current);
-        heading = Math.atan2(move.z, move.x);
+        explorerTargetQuat.setFromUnitVectors(forwardAxis, move.clone().normalize());
       } else {
         const delta = target.clone().sub(current);
         if (delta.lengthSq() > 0.01) {
-          heading = Math.atan2(delta.z, delta.x);
           const travel = motionRef.current ? Math.min(delta.length(), dt * 4.7) : delta.length();
           current.add(delta.normalize().multiplyScalar(travel));
+          explorerTargetQuat.setFromUnitVectors(forwardAxis, delta.clone().normalize());
         }
       }
 
@@ -457,15 +458,15 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       const greeting = Math.sin(arrivalReaction * Math.PI);
       const lookAt = lookingAtRef.current ?? hoveredProject ?? focusedProject;
       if (lookAt && target.distanceToSquared(current) < 0.04 && !move.lengthSq()) {
-        const point = WORLD_POINTS[lookAt];
-        heading = Math.atan2(point.z - current.z, point.x - current.x);
+        const targetPos = WORLD_POINTS[lookAt].clone();
+        targetPos.y += 0.9;
+        const dir = targetPos.sub(world.explorer.position).normalize();
+        explorerTargetQuat.setFromUnitVectors(forwardAxis, dir);
       }
       world.explorer.position.set(current.x, current.y + 1.58 + (animate ? Math.sin(now * 0.003) * 0.1 + greeting * 0.24 : 0), current.z);
-      const headingDelta = Math.atan2(Math.sin(-heading - world.explorer.rotation.y), Math.cos(-heading - world.explorer.rotation.y));
-      world.explorer.rotation.y += headingDelta * (animate ? 1 - Math.exp(-14 * dt) : 1);
+      world.explorer.quaternion.slerp(explorerTargetQuat, animate ? 1 - Math.exp(-22 * dt) : 1);
       host.dataset.explorerHeading = world.explorer.rotation.y.toFixed(3);
       host.dataset.lookTarget = lookAt ?? '';
-      world.explorer.rotation.z = animate && move.lengthSq() ? Math.sin(now * 0.009) * 0.035 : 0;
       world.hoverLight.intensity = animate ? 2.15 + Math.sin(now * 0.007) * 0.45 + greeting * 1.3 : 2.25;
       const positionStamp = `${current.x.toFixed(2)},${current.y.toFixed(2)},${current.z.toFixed(2)}`;
       if (positionStamp !== lastPositionStamp) {
@@ -516,7 +517,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       journey.update(dt, animate);
       controls.update(dt);
       camera.updateMatrixWorld();
-      if (hoverPending && now - lastHoverCheck > 32) {
+      if (hoverPending && now - lastHoverCheck > 16) {
         hoverPending = false;
         lastHoverCheck = now;
         world.group.updateMatrixWorld(true);
@@ -538,7 +539,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           positionStamp,
           camera.position.x.toFixed(3), camera.position.y.toFixed(3), camera.position.z.toFixed(3),
           controls.target.x.toFixed(3), controls.target.y.toFixed(3), controls.target.z.toFixed(3),
-          world.explorer.rotation.y.toFixed(3),
+          world.explorer.quaternion.x.toFixed(3), world.explorer.quaternion.y.toFixed(3), world.explorer.quaternion.z.toFixed(3),
           focusedProject ?? '', hoveredProject ?? '', lookAt ?? '',
           landmarks.map(item => item.lift.toFixed(3)).join(),
         ].join('|');
@@ -637,8 +638,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       const projectHits = raycaster.intersectObjects(pickableProjects, false);
       if (projectHits.length) {
         const id = world.pickers.get(projectHits[0].object);
-        if (id) setWaypoint(id);
-        return;
+        if (id) { setWaypoint(id); return; }
       }
       const groundHits = raycaster.intersectObjects(world.ground, false);
       if (groundHits.length) {

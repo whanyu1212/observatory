@@ -566,6 +566,16 @@ export function buildWorld(): WorldBuild {
 
   (Object.keys(WORLD_POINTS) as ProjectId[]).forEach((id) => {
     const position = WORLD_POINTS[id];
+    // Generous hit proxy sphere around the sculpture so hovering anywhere over or near the island registers smoothly
+    const hitProxy = new THREE.Mesh(
+      new THREE.SphereGeometry(2.2, 12, 8),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    hitProxy.position.set(position.x, position.y + 1.2, position.z);
+    hitProxy.name = `picker-proxy-${id}`;
+    pickers.set(hitProxy, id);
+    group.add(hitProxy);
+
     const landmark = landmarkMakers[id]();
     landmark.position.set(position.x, position.y + 0.72, position.z);
     landmark.name = `landmark-${id}`;

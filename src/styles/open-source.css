@@ -1,4 +1,4 @@
-.obs-open-source { scroll-margin-top: 80px; padding: 58px clamp(24px, 4vw, 64px) 64px; background: radial-gradient(ellipse at 28% 64%, color-mix(in srgb, var(--obs-glow), transparent 88%), transparent 65%); }
+.obs-open-source { scroll-margin-top: 80px; padding: 58px clamp(24px, 4vw, 64px) 64px; background: radial-gradient(ellipse 26% 32% at 28% 60%, color-mix(in srgb, var(--obs-glow), transparent 88%), transparent 70%); }
 .obs-open-source:focus { outline: none; }
 .obs-open-source-heading { display: grid; grid-template-columns: 1.2fr 1fr; align-items: start; gap: 48px; margin-bottom: 24px; }
 .obs-open-source h2 { font-size: clamp(38px, 4.3vw, 62px); font-weight: 400; line-height: 1.08; letter-spacing: -.055em; }
@@ -43,6 +43,7 @@
 @keyframes obs-contribution-flow { to { stroke-dashoffset: -51; } }
 @keyframes obs-contribution-reveal { from { opacity: .4; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 800px) {
+  .obs-open-source { background: radial-gradient(ellipse 48% 28% at 50% 48%, color-mix(in srgb, var(--obs-glow), transparent 88%), transparent 70%); }
   .obs-open-source-heading { grid-template-columns: 1fr; gap: 24px; }
   .obs-open-source h2 span { display: block; }
   .obs-constellation { grid-template-columns: 1fr; gap: 32px; }
