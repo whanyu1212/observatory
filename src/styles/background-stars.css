@@ -45,9 +45,10 @@
 }
 .obs-starfield__star:nth-of-type(11n + 2)::after { transform: translate(-50%, -50%) rotate(90deg); }
 
-/* Keep continuous animation sparse and opacity-only so the WebGL scene retains
-   the frame budget. Across both page layers this selects roughly eight stars. */
-.obs-starfield.is-moving .obs-starfield__star:nth-of-type(29n + 5) {
+/* Keep continuous animation to one opacity-only accent per page layer so the
+   WebGL scene retains the frame budget. */
+.obs-starfield--page.is-moving .obs-starfield__star:nth-of-type(5),
+.obs-starfield--universe.is-moving .obs-starfield__star:nth-of-type(5) {
   animation: obs-star-twinkle var(--star-twinkle-duration) var(--star-twinkle-delay) ease-in-out infinite;
 }
 
