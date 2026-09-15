@@ -4,12 +4,10 @@ import { projects, type ProjectId } from './curiosity';
 import '@/styles/playground.css';
 
 const ExplorationScene = lazy(() => import('./ExplorationScene').then(module => ({ default: module.ExplorationScene })));
-const GemChallenge = lazy(() => import('./GemChallenge').then(module => ({ default: module.GemChallenge })));
 const projectIds = Object.keys(projects) as ProjectId[];
 const tour: ProjectId[] = ['gem-dota', 'wisp', 'mental-gym'];
 
 interface Props {
-  mapImage: string;
   panelProject: ProjectId | null;
   active: boolean;
   motionEnabled: boolean;
@@ -19,21 +17,18 @@ interface Props {
   onViewProject: (id: ProjectId) => void;
 }
 
-export function Playground({ mapImage, panelProject, active, motionEnabled, onToggleMotion, onSelect, onReadNotes, onViewProject }: Props) {
+export function Playground({ panelProject, active, motionEnabled, onToggleMotion, onSelect, onReadNotes, onViewProject }: Props) {
   const [destination, setDestination] = useState<ProjectId | null>(null);
   const [navigationRequest, setNavigationRequest] = useState(0);
   const [arrived, setArrived] = useState<ProjectId | null>(null);
   const [discovered, setDiscovered] = useState<ProjectId[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
-  const [challengeOpen, setChallengeOpen] = useState(false);
-  const [challengeSolved, setChallengeSolved] = useState(false);
   const [ready, setReady] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const previousPanel = useRef(panelProject);
-  const previousChallenge = useRef(challengeOpen);
   const returnToWorld = () => {
     setArrived(null);
     sectionRef.current?.querySelector<HTMLCanvasElement>('canvas')?.focus({ preventScroll: true });
@@ -43,11 +38,7 @@ export function Playground({ mapImage, panelProject, active, motionEnabled, onTo
     previousPanel.current = panelProject;
   }, [panelProject, active]);
   useEffect(() => {
-    if (previousChallenge.current && !challengeOpen && active) returnToWorld();
-    previousChallenge.current = challengeOpen;
-  }, [challengeOpen, active]);
-  useEffect(() => {
-    if (!active) { setArrived(null); setChallengeOpen(false); setMenuOpen(false); setTourStep(null); }
+    if (!active) { setArrived(null); setMenuOpen(false); setTourStep(null); }
   }, [active]);
   const go = (id: ProjectId) => {
     setArrived(null);
@@ -90,12 +81,11 @@ export function Playground({ mapImage, panelProject, active, motionEnabled, onTo
       <span className="obs-mono"><Compass size={14} /> EXPLORER / 01</span>
       <strong>{String(discovered.length).padStart(2, '0')}<span> / {String(projectIds.length).padStart(2, '0')}</span></strong>
       <span className="obs-mono">FEATURED PROJECTS EXPLORED</span>
-      {challengeSolved && <span className="playground-badge"><Check size={12} /> Replay decoded</span>}
     </div>
 
     <div className="playground-world">
       <Suspense fallback={<div className="playground-loading" role="status">Assembling a little universe…</div>}>
-        <ExplorationScene destination={destination} selectedProject={arrived} detailProject={panelProject} navigationRequest={navigationRequest} motionEnabled={motionEnabled && !challengeOpen} onArrive={arrive} onReady={() => setReady(true)} />
+        <ExplorationScene destination={destination} selectedProject={arrived} detailProject={panelProject} navigationRequest={navigationRequest} motionEnabled={motionEnabled} onArrive={arrive} onReady={() => setReady(true)} />
       </Suspense>
     </div>
 
@@ -121,11 +111,9 @@ export function Playground({ mapImage, panelProject, active, motionEnabled, onTo
       <p className="playground-description">{project.description}</p>
       <div className="playground-discovery-actions">
         <button className="playground-primary" onClick={() => onViewProject(arrived)}>Explore the project <ArrowUpRight size={14} /></button>
-        {arrived === 'gem-dota' && <button onClick={() => setChallengeOpen(true)}><Play size={14} />{challengeSolved ? 'Revisit replay' : 'Replay walkthrough'}</button>}
         <button onClick={() => onReadNotes(arrived)}>Read field notes <ArrowUpRight size={13} /></button>
       </div>
       {tourStep !== null && arrived === tour[tourStep] && <button className="playground-next" onClick={nextStop}>{tourStep === tour.length - 1 ? 'Finish tour · keep exploring' : 'Next project'}<ArrowUpRight size={14} /></button>}
     </aside>}
-    {challengeOpen && <Suspense fallback={<div className="playground-challenge-loading" role="status">Preparing the replay…<button onClick={() => setChallengeOpen(false)}>Cancel</button></div>}><GemChallenge mapImage={mapImage} motionEnabled={motionEnabled} onClose={() => setChallengeOpen(false)} onComplete={() => setChallengeSolved(true)} /></Suspense>}
   </section>;
 }

@@ -18,7 +18,7 @@ import type { ProjectId } from './curiosity';
 type Section = 'overview' | 'experience' | 'about';
 type Direction = 'orbital' | 'signal' | 'blueprint';
 
-export function Observatory({ projectImage, mapImage }: { projectImage: string; mapImage: string }) {
+export function Observatory({ projectImage }: { projectImage: string }) {
   const [section, setSection] = useState<Section>('overview');
   const [direction, setDirection] = useState<Direction>('orbital');
   const [notesProject, setNotesProject] = useState<ProjectId | null>(null);
@@ -124,7 +124,7 @@ export function Observatory({ projectImage, mapImage }: { projectImage: string; 
       <main id="portfolio-content" className="obs-main">
         <div ref={contentRef} className="obs-content-focus" tabIndex={-1}>
         <div hidden={section !== 'overview'}>
-          <Playground mapImage={mapImage} panelProject={projectPanel ?? notesProject} active={section === 'overview'} motionEnabled={motionEnabled && section === 'overview'} onToggleMotion={toggleMotion} onSelect={playProjectSound} onReadNotes={revealProject} onViewProject={openProject} />
+          <Playground panelProject={projectPanel ?? notesProject} active={section === 'overview'} motionEnabled={motionEnabled && section === 'overview'} onToggleMotion={toggleMotion} onSelect={playProjectSound} onReadNotes={revealProject} onViewProject={openProject} />
         </div>
         <ExperiencePage hidden={section !== 'experience'} motionEnabled={motionEnabled} onExplore={() => navigate('overview')} />
         <section className="obs-about-profile" hidden={section !== 'about'} aria-labelledby="about-title">
@@ -211,7 +211,7 @@ export function Observatory({ projectImage, mapImage }: { projectImage: string; 
         <a className="obs-footer-contact obs-mono" href="mailto:whanyu47@gmail.com">LET'S CONNECT <ArrowUpRight size={14} /></a>
       </footer>
       <Desktop /><Dock />
-      {projectPanel && <ProjectPanel projectId={projectPanel} mapImage={mapImage} motionEnabled={motionEnabled} onClose={() => setProjectPanel(null)} onReadNotes={revealProject} />}
+      {projectPanel && <ProjectPanel projectId={projectPanel} motionEnabled={motionEnabled} onClose={() => setProjectPanel(null)} onReadNotes={revealProject} />}
       {notesProject && <FieldNotesPanel projectId={notesProject} projectImage={projectImage} motionEnabled={motionEnabled} onClose={() => setNotesProject(null)} />}
     </div>
   );

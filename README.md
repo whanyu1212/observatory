@@ -10,7 +10,7 @@ Built with **Astro**, **React**, and **Three.js**.
 
 - **A playable overview** — a dense, independently twinkling starfield and blue-violet nebula clouds. Travel with WASD/arrow keys, a direct project menu, or a three-stop guided tour.
 - **Projects as places** — ten asteroid islands with orbiting fragments and hand-built geometry: gem, wisp, prawn, sofa, agent team, trading chart, fractional coin, deployment rocket, brain with a barbell, and a layered terminal with an inspection lens.
-- **A real artifact to inspect** — Gem Dota includes a guided walkthrough of genuine Dota 2 replay output.
+- **Repository artifacts to inspect** — Explore panels pair concise project descriptions with screenshots and visuals sourced from each project repository.
 - **Contextual reading** — project case studies and field notes as wide side panels on desktop, full-screen sheets on mobile.
 - **Experience as chapters** — résumé-backed career pages (Micron Technology, KPMG, Singapore Tourism Board) with connected milestones and a scroll-aware chapter index.
 - **Curiosity Map** — an interactive atlas of exploration trails and the questions behind each project.
@@ -26,7 +26,7 @@ Built with **Astro**, **React**, and **Three.js**.
 | Scroll the page | Ordinary scroll | One-finger swipe |
 | Return to the opening shot | Reset view | Reset view |
 
-Camera buttons are keyboard accessible, and tilt/zoom limits keep the universe in reach. Project labels separate as the camera moves and draw connecting lines when shifted; mobile keeps numbered markers with a project legend. Discovery progress and the replay badge last for the current page session.
+Camera buttons are keyboard accessible, and tilt/zoom limits keep the universe in reach. Project labels separate as the camera moves and draw connecting lines when shifted; mobile keeps numbered markers with a project legend. Discovery progress lasts for the current page session.
 
 ## Accessibility and fallbacks
 
@@ -56,12 +56,11 @@ pnpm preview
 - `src/components/observatory/Observatory.tsx`: opening composition, project panels, biography, and navigation.
 - `src/components/observatory/ExperiencePage.tsx` and `src/styles/experience.css`: professional history, career navigation, work details, outcomes, and education.
 - `src/styles/observatory.css`: typography, responsive layouts, and the three environment palettes.
-- `src/components/observatory/Playground.tsx` and `src/styles/playground.css`: world HUD, guided tour, discoveries, project menu, and challenge entry.
+- `src/components/observatory/Playground.tsx` and `src/styles/playground.css`: world HUD, guided tour, discoveries, and project menu.
 - `src/components/observatory/ExplorationScene.tsx`: Three.js world, explorer movement, camera, and accessible destinations.
 - `src/components/observatory/worldGeometry.ts` and `projectLandmarks.ts`: handcrafted project sculptures—gem, wisp, prawn, sofa, agent team, trading chart, fractional coin, deployment rocket, brain with a barbell, and a layered terminal with an inspection lens for Claude Code Anatomy.
 - `src/components/observatory/FieldNotesPanel.tsx` and `src/styles/field-notes.css`: project journal, accessible modal, and mobile reading layout.
-- `src/components/observatory/ProjectPanel.tsx` and `src/styles/project-panel.css`: expanded project case studies opened from the universe.
-- `src/components/observatory/GemChallenge.tsx` and `src/styles/gem-challenge.css`: guided walkthrough of an actual Gem Dota replay visualization.
+- `src/components/observatory/ProjectPanel.tsx` and `src/styles/project-panel.css`: project descriptions and repository galleries opened from the universe.
 - `src/components/observatory/CuriosityMap.tsx` and `src/styles/curiosity-map.css`: the interactive atlas, project anchors, and motion.
 - `src/components/observatory/curiosity.ts`: project details, exploration trails, and open questions.
 - `src/components/observatory/OpenSource.tsx` and `src/styles/open-source.css`: contribution highlights with direct pull-request links.
@@ -70,6 +69,6 @@ pnpm preview
 - `src/stores/osStore.ts`: workspace state and actions.
 - `src/components/apps/`: individual workspace views.
 
-## Project image
+## Project images
 
-The Gem Dota preview is the original report screenshot from [whanyu1212/gem-dota](https://github.com/whanyu1212/gem-dota/blob/main/assets/interactive_movement_trail.png), stored in `src/assets/gem-dota-preview.png`. Astro and Sharp generate an optimized WebP at build time. Project text and public contact links were checked against [Hanyu's GitHub profile](https://github.com/whanyu1212) on 12 September 2026.
+Explore galleries use local, optimized copies of public visuals from the linked repositories. The Gem Dota field-note preview remains sourced from [whanyu1212/gem-dota](https://github.com/whanyu1212/gem-dota/blob/main/assets/interactive_movement_trail.png). Project text and public contact links were checked against [Hanyu's GitHub profile](https://github.com/whanyu1212) on 12 September 2026.
