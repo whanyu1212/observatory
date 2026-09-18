@@ -23,13 +23,15 @@ function standard(
 
 function solid(geometry: THREE.BufferGeometry, material: THREE.Material) {
   const object = new THREE.Mesh(geometry, material);
-  object.castShadow = true;
-  object.receiveShadow = true;
+  object.castShadow = !material.transparent;
+  object.receiveShadow = !material.transparent;
   return object;
 }
 
 function decoration<T extends THREE.Object3D>(object: T) {
   object.userData.decorative = true;
+  object.castShadow = false;
+  object.receiveShadow = false;
   return object;
 }
 
@@ -141,17 +143,18 @@ export function makeGem() {
   group.userData.bobSpeed = 1.25;
 
   const gemMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x19ac73,
-    roughness: 0.08,
-    metalness: 0,
-    transmission: 0.62,
-    thickness: 1.3,
+    color: 0x66d8af,
+    vertexColors: true,
+    roughness: 0.16,
+    metalness: 0.12,
+    transmission: 0.24,
+    thickness: 0.9,
     ior: 1.7,
     clearcoat: 0.75,
     clearcoatRoughness: 0.08,
     attenuationColor: new THREE.Color(0x076337),
     attenuationDistance: 2.8,
-    envMapIntensity: 0.65,
+    envMapIntensity: 0.95,
     emissive: new THREE.Color(0x084f39),
     emissiveIntensity: 0.08,
     flatShading: true,

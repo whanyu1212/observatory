@@ -1,37 +1,42 @@
-.obs-open-source { scroll-margin-top: 80px; padding: 72px clamp(24px, 4vw, 64px) 88px; border-top: 1px solid color-mix(in srgb, var(--obs-muted), transparent 84%); background: radial-gradient(ellipse 36% 55% at 78% 72%, color-mix(in srgb, var(--obs-glow), transparent 91%), transparent 72%); }
-.obs-open-source:focus { outline: none; }
-.obs-open-source-heading { display: grid; grid-template-columns: 1.2fr 1fr; align-items: end; gap: 48px; margin-bottom: 44px; }
-.obs-open-source h2 { font-size: clamp(38px, 4.3vw, 62px); font-weight: 400; line-height: 1.08; letter-spacing: -.055em; }
-.obs-open-source h2 span { display: block; color: var(--obs-accent); }
-.obs-open-source-heading > p { max-width: 520px; margin: 0 !important; color: var(--obs-muted); font-size: 16px; line-height: 1.8; }
-.obs-contribution-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-.obs-contribution-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 22px; padding: 28px 30px; border: 1px solid color-mix(in srgb, var(--obs-muted), transparent 76%); border-radius: 12px; background: color-mix(in srgb, var(--obs-bg), transparent 18%); }
-.obs-contribution-card > svg { margin-top: 3px; color: var(--obs-accent); }
-.obs-contribution-repository { color: var(--obs-accent); font-size: 11px; letter-spacing: .05em; }
-.obs-contribution-card h3 { margin: 8px 0 4px; font-size: clamp(25px, 3vw, 34px); font-weight: 400; letter-spacing: -.04em; }
-.obs-contribution-card p { max-width: 620px; margin: 8px 0 0 !important; color: var(--obs-muted); font-size: 15px; line-height: 1.75; }
-.obs-contribution-card .obs-contribution-owner { margin-top: 0 !important; color: var(--obs-ink); font-size: 13px; }
-.obs-contribution-actions { display: flex; flex-wrap: wrap; gap: 0 22px; }
-.obs-contribution-card a { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; margin-top: 16px; color: var(--obs-accent); font-size: 14px; }
-.obs-contribution-card a:hover { color: var(--obs-ink); }
-.obs-contribution-card a:focus-visible { outline: 2px solid var(--obs-accent); outline-offset: 5px; border-radius: 2px; }
-.observatory[data-motion="on"] .obs-open-source:not([data-revealed="true"]) .obs-open-source-heading,
-.observatory[data-motion="on"] .obs-open-source:not([data-revealed="true"]) .obs-contribution-card { opacity: 0; transform: translateY(18px); }
-.observatory[data-motion="on"] .obs-open-source[data-revealed="true"] .obs-open-source-heading,
-.observatory[data-motion="on"] .obs-open-source[data-revealed="true"] .obs-contribution-card { transition: opacity .48s ease-out, transform .48s ease-out; }
-.observatory[data-motion="on"] .obs-open-source[data-revealed="true"] .obs-contribution-card:nth-child(2) { transition-delay: .08s; }
-.observatory[data-motion="on"] .obs-contribution-card a svg { transition: transform .16s ease-out; }
-.observatory[data-motion="on"] .obs-contribution-card a:hover svg,
-.observatory[data-motion="on"] .obs-contribution-card a:focus-visible svg { transform: translate(2px, -2px); }
-
-@media (max-width: 800px) {
-  .obs-open-source { padding-block: 58px 68px; }
-  .obs-open-source-heading { grid-template-columns: 1fr; align-items: start; gap: 22px; margin-bottom: 32px; }
-  .obs-contribution-list { grid-template-columns: 1fr; }
+.obs-open-source {
+  display: grid;
+  grid-template-columns: minmax(190px, .8fr) minmax(0, 2fr);
+  align-items: start;
+  gap: clamp(28px, 4vw, 64px);
+  scroll-margin-top: 80px;
+  padding: 48px clamp(24px, 4vw, 64px) 44px;
 }
+.obs-open-source:focus { outline: none; }
+.obs-open-source-heading { padding-top: 2px; }
+.obs-open-source .obs-note-label { margin-bottom: 12px; color: var(--obs-muted); }
+.obs-open-source h2 { font-size: clamp(28px, 3vw, 38px); font-weight: 400; line-height: 1.12; letter-spacing: -.055em; }
+.obs-open-source h2 span { display: block; color: var(--obs-accent); }
+.obs-contribution-list { display: grid; gap: 24px; }
+.obs-contribution-row { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 16px; }
+.obs-contribution-row > svg { margin-top: 1px; color: var(--obs-accent); }
+.obs-contribution-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; color: var(--obs-muted); font-size: 10px; letter-spacing: .025em; }
+.obs-contribution-role { color: var(--obs-accent); text-transform: uppercase; letter-spacing: .08em; }
+.obs-contribution-row h3 { margin: 5px 0; color: var(--obs-ink); font-size: 22px; font-weight: 500; line-height: 1.25; letter-spacing: -.035em; }
+.obs-contribution-row p { color: var(--obs-muted); font-size: 14px; line-height: 1.65; }
+.obs-contribution-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; margin-top: 3px; }
+.obs-contribution-actions a { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; color: var(--obs-accent); font-size: 12px; }
+.obs-contribution-actions .obs-contribution-secondary { color: var(--obs-muted); }
+.obs-contribution-actions a:hover { color: var(--obs-ink); }
+.obs-contribution-actions a:focus-visible { outline: 2px solid var(--obs-accent); outline-offset: 4px; border-radius: 2px; }
+.observatory[data-motion="on"] .obs-open-source:not([data-revealed="true"]) .obs-open-source-heading,
+.observatory[data-motion="on"] .obs-open-source:not([data-revealed="true"]) .obs-contribution-row { opacity: 0; transform: translateY(10px); }
+.observatory[data-motion="on"] .obs-open-source[data-revealed="true"] .obs-open-source-heading,
+.observatory[data-motion="on"] .obs-open-source[data-revealed="true"] .obs-contribution-row { transition: opacity .4s ease-out, transform .4s ease-out; }
+.observatory[data-motion="on"] .obs-contribution-row:nth-child(2) { transition-delay: .06s; }
+.observatory[data-motion="on"] .obs-contribution-actions a svg { transition: transform .16s ease-out; }
+.observatory[data-motion="on"] .obs-contribution-actions a:hover svg,
+.observatory[data-motion="on"] .obs-contribution-actions a:focus-visible svg { transform: translate(2px, -2px); }
 
-@media (max-width: 480px) {
-  .obs-contribution-card { gap: 14px; padding: 22px 20px; }
-  .obs-contribution-actions { flex-direction: column; align-items: flex-start; }
-  .obs-contribution-actions a + a { margin-top: 0; }
+@media (max-width: 700px) {
+  .obs-open-source { grid-template-columns: 1fr; gap: 28px; padding-block: 36px 28px; }
+  .obs-open-source h2 { font-size: 30px; }
+  .obs-open-source h2 span { display: inline; }
+  .obs-contribution-list { gap: 20px; }
+  .obs-contribution-row { gap: 12px; }
+  .obs-contribution-meta { gap: 4px 10px; }
 }

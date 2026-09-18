@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent, SyntheticEvent } from 'react';
 import type { ProjectId } from './curiosity';
 
@@ -28,20 +28,20 @@ export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, o
 
   const collapsedFrame = useCallback(() => {
     const dialog = dialogRef.current!;
-    // offsetWidth/Height stay stable even if an opening animation is interrupted.
+    // Layout offsets stay stable through transforms and locate the centered
+    // terminal window even when a viewport change adjusts its size.
     const width = dialog.offsetWidth;
     const height = dialog.offsetHeight;
     const origin = islandOrigin(projectId);
-    const dx = origin.x - (window.innerWidth - width / 2);
-    const dy = origin.y - height / 2;
+    const dx = origin.x - (dialog.offsetLeft + width / 2);
+    const dy = origin.y - (dialog.offsetTop + height / 2);
     return {
       transform: `translate(${dx}px, ${dy}px) scale(.08)`,
       opacity: 0,
-      borderRadius: '48px',
     };
   }, [projectId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -49,16 +49,16 @@ export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, o
     closingRef.current = false;
     document.body.style.overflow = 'hidden';
     dialog.showModal();
-    closeButtonRef.current?.focus({ preventScroll: true });
     dialog.dataset.phase = 'opening';
 
     if (optionsRef.current.motionEnabled && typeof dialog.animate === 'function') {
-      const animation = dialog.animate([collapsedFrame(), { transform: 'none', opacity: 1, borderRadius: '0px' }], {
-        duration: 520, easing: 'cubic-bezier(.22, 1, .36, 1)',
+      const animation = dialog.animate([collapsedFrame(), { transform: 'none', opacity: 1 }], {
+        duration: 280, easing: 'cubic-bezier(.22, 1, .36, 1)', fill: 'backwards',
       });
       animationRef.current = animation;
       animation.onfinish = () => { dialog.dataset.phase = 'open'; animationRef.current = null; };
     } else dialog.dataset.phase = 'open';
+    closeButtonRef.current?.focus({ preventScroll: true });
 
     return () => {
       if (animationRef.current) animationRef.current.onfinish = null;
@@ -79,19 +79,27 @@ export function useProjectDialog(projectId: ProjectId, motionEnabled: boolean, o
     const dialog = dialogRef.current;
     if (!dialog || closingRef.current) return;
     closingRef.current = true;
-    const current = getComputedStyle(dialog);
-    const from = { transform: current.transform, opacity: current.opacity, borderRadius: current.borderRadius };
-    if (animationRef.current) animationRef.current.onfinish = null;
-    animationRef.current?.cancel();
-    animationRef.current = null;
+    const opening = animationRef.current;
     dialog.dataset.phase = 'closing';
     const finish = () => {
       // Retain the finished animation so unmount cleanup releases its fill state.
       optionsRef.current.onClose();
     };
-    if (!optionsRef.current.motionEnabled || typeof dialog.animate !== 'function') return finish();
-    const animation = dialog.animate([from, collapsedFrame()], {
-      duration: 300, easing: 'cubic-bezier(.55, 0, .8, .4)', fill: 'forwards',
+    if (!optionsRef.current.motionEnabled || typeof dialog.animate !== 'function') {
+      if (opening) opening.onfinish = null;
+      opening?.cancel();
+      animationRef.current = null;
+      return finish();
+    }
+    if (opening) {
+      // Reversing keeps an interrupted entrance at its current transform.
+      opening.onfinish = finish;
+      opening.playbackRate = -280 / 180;
+      opening.play();
+      return;
+    }
+    const animation = dialog.animate([{ transform: 'none', opacity: 1 }, collapsedFrame()], {
+      duration: 180, easing: 'cubic-bezier(.55, 0, .8, .4)', fill: 'forwards',
     });
     animationRef.current = animation;
     animation.onfinish = finish;

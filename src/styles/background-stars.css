@@ -16,46 +16,35 @@
     radial-gradient(ellipse at 18% 64%, color-mix(in srgb, var(--obs-glow), transparent 95%), transparent 31%);
 }
 
-.obs-starfield__star {
+.obs-starfield__texture {
   position: absolute;
-  left: var(--star-x);
-  top: var(--star-y);
-  width: var(--star-size);
-  height: var(--star-size);
-  border-radius: 50%;
-  background: var(--obs-ink);
-  opacity: var(--star-opacity);
-  box-shadow: 0 0 3px var(--obs-ink), 0 0 var(--star-glow) color-mix(in srgb, var(--obs-accent), transparent 25%);
-  transform: translate3d(0, 0, 0);
-  will-change: auto;
+  inset: 0;
+  background: url('/starfield-sparse.svg') repeat 7% 11% / 1200px 1200px;
+  opacity: .9;
 }
 
-.obs-starfield__star:nth-of-type(4n + 1) { background: var(--obs-accent); }
-.obs-starfield__star:nth-of-type(11n + 2)::before,
-.obs-starfield__star:nth-of-type(11n + 2)::after {
+.obs-starfield__texture::after {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 11px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--obs-ink), transparent);
-  opacity: .75;
-  transform: translate(-50%, -50%);
+  left: 45%;
+  top: 6%;
+  width: 8px;
+  height: 8px;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  background: var(--obs-accent);
+  opacity: .8;
 }
-.obs-starfield__star:nth-of-type(11n + 2)::after { transform: translate(-50%, -50%) rotate(90deg); }
 
 /* Keep continuous animation to one opacity-only accent per page layer so the
    WebGL scene retains the frame budget. */
-.obs-starfield--page.is-moving .obs-starfield__star:nth-of-type(5),
-.obs-starfield--universe.is-moving .obs-starfield__star:nth-of-type(5) {
-  animation: obs-star-twinkle var(--star-twinkle-duration) var(--star-twinkle-delay) ease-in-out infinite;
+.obs-starfield.is-moving .obs-starfield__texture::after {
+  animation: obs-star-twinkle 4.6s -1.8s ease-in-out infinite;
 }
 
 @keyframes obs-star-twinkle {
   0%, 100% { opacity: .1; }
   35% { opacity: .3; }
-  50%, 57% { opacity: var(--star-opacity); }
+  50%, 57% { opacity: .9; }
   76% { opacity: .22; }
 }
 
@@ -66,55 +55,46 @@
   mask-image: linear-gradient(#000 78%, transparent);
 }
 .obs-starfield--universe .obs-starfield__veil {
-  opacity: 1;
-  background:
-    radial-gradient(ellipse 42% 50% at 88% 48%, #273a793d, transparent 90%),
-    radial-gradient(ellipse 50% 25% at 54% 37%, #5d3d793b, transparent 85%),
-    radial-gradient(ellipse 47% 43% at 42% 76%, #1c547b33, transparent 80%);
+  display: none;
+}
+.obs-starfield--universe .obs-starfield__texture {
+  background-image: url('/starfield-dense.svg');
+  background-position: 13% 7%;
+  background-size: 680px 560px;
+  opacity: .48;
+}
+.obs-starfield--universe .obs-starfield__texture::after {
+  left: 58%;
+  top: 14%;
+  background: #e7efff;
 }
 .obs-cosmic-clouds {
   position: absolute;
-  left: 12%;
-  top: 14%;
-  width: 108%;
-  height: 72%;
-  transform: rotate(-26deg);
-  filter: blur(24px);
+  inset: 0;
+  /* The cloud detail and distant pinprick stars are a single cached image.
+     Keep this layer still: no blur, animated filters, or per-frame cloud shader. */
   background:
-    radial-gradient(ellipse 28% 18% at 72% 43%, #6474a840, transparent 85%),
-    radial-gradient(ellipse 27% 24% at 50% 48%, #855d9f45, transparent 78%),
-    radial-gradient(ellipse 26% 19% at 28% 49%, #367bab3b, transparent 80%),
-    radial-gradient(ellipse 54% 12% at 55% 51%, #7987b837, transparent 88%),
-    radial-gradient(ellipse 40% 17% at 58% 59%, #040717bd, transparent 78%);
+    linear-gradient(180deg, #060914b8 0%, #06091424 34%, #06091433 64%, #060914e6 100%),
+    linear-gradient(90deg, #060914c2 0%, #06091447 35%, #0609141f 72%, #06091440 100%),
+    url('/backgrounds/nebula.webp') center 44% / cover no-repeat;
+  opacity: .64;
 }
-.obs-starfield--universe .obs-starfield__star {
-  background: #e7efff;
-  box-shadow: 0 0 4px #d5e5ff91, 0 0 var(--star-glow) #709ed74a;
-}
-.obs-starfield--universe .obs-starfield__star:nth-of-type(7n) { background: #b3d5ff; }
-.obs-starfield--universe .obs-starfield__star:nth-of-type(17n) { background: #ffe2b7; }
-.obs-starfield--universe .obs-starfield__star::before,
-.obs-starfield--universe .obs-starfield__star::after { display: none; }
-.obs-starfield--universe .obs-starfield__star:nth-of-type(37n)::before,
-.obs-starfield--universe .obs-starfield__star:nth-of-type(37n)::after {
-  content: '';
-  display: block;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 10px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #d6eaff, transparent);
-  transform: translate(-50%, -50%);
-}
-.obs-starfield--universe .obs-starfield__star:nth-of-type(37n)::after { transform: translate(-50%, -50%) rotate(90deg); }
 
 .obs-starfield--map { inset: 4% 2%; opacity: 1; }
 .obs-starfield--map .obs-starfield__veil { display: none; }
+.obs-starfield--map .obs-starfield__texture {
+  background-image: url('/starfield-dense.svg');
+  background-size: 820px 680px;
+  opacity: .84;
+}
 
 @media (max-width: 700px) {
   .obs-starfield__veil { opacity: .36; }
-  .obs-starfield--universe .obs-starfield__veil { opacity: .8; }
-  .obs-starfield--universe .obs-starfield__star:nth-of-type(3n) { display: none; }
-  .obs-cosmic-clouds { left: -15%; width: 150%; filter: blur(18px); }
+  .obs-starfield--universe .obs-starfield__texture { background-size: 760px 625px; }
+  .obs-cosmic-clouds {
+    background:
+      linear-gradient(180deg, #060914ed 0%, #060914a6 28%, #06091426 49%, #06091466 78%, #060914e6 100%),
+      url('/backgrounds/nebula-mobile.webp') 57% center / auto 100% no-repeat;
+    opacity: .58;
+  }
 }

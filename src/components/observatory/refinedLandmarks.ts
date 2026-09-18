@@ -1,0 +1,291 @@
+import * as THREE from 'three';
+
+// The four sculptures share a quiet material language with the rest of the world.
+// Geometries used repeatedly within a sculpture are kept local to its builder.
+function material(color: number, roughness = 0.7, metalness = 0.04, emissive = 0, emissiveIntensity = 0) {
+  return new THREE.MeshStandardMaterial({ color, roughness, metalness, emissive, emissiveIntensity });
+}
+
+function solid(geometry: THREE.BufferGeometry, surface: THREE.Material, decorative = false) {
+  const object = new THREE.Mesh(geometry, surface);
+  object.castShadow = !decorative;
+  object.receiveShadow = !decorative;
+  if (decorative) object.userData.decorative = true;
+  return object;
+}
+
+function roundedPanel(width: number, height: number, depth: number, radius: number) {
+  const shape = new THREE.Shape();
+  const x = -width / 2;
+  const y = -height / 2;
+  shape.moveTo(x + radius, y);
+  shape.lineTo(x + width - radius, y);
+  shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+  shape.lineTo(x + width, y + height - radius);
+  shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  shape.lineTo(x + radius, y + height);
+  shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+  shape.lineTo(x, y + radius);
+  shape.quadraticCurveTo(x, y, x + radius, y);
+  return new THREE.ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled: true,
+    bevelSegments: 1,
+    bevelSize: Math.min(radius * 0.18, 0.035),
+    bevelThickness: Math.min(depth * 0.16, 0.025),
+    curveSegments: 2,
+    steps: 1,
+  });
+}
+
+function roundedFrame(width: number, height: number, depth: number, radius: number, border: number) {
+  const shape = new THREE.Shape();
+  const x = -width / 2;
+  const y = -height / 2;
+  shape.moveTo(x + radius, y);
+  shape.lineTo(x + width - radius, y);
+  shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+  shape.lineTo(x + width, y + height - radius);
+  shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  shape.lineTo(x + radius, y + height);
+  shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+  shape.lineTo(x, y + radius);
+  shape.quadraticCurveTo(x, y, x + radius, y);
+  const opening = new THREE.Path();
+  opening.moveTo(x + border, y + border);
+  opening.lineTo(x + border, y + height - border);
+  opening.lineTo(x + width - border, y + height - border);
+  opening.lineTo(x + width - border, y + border);
+  opening.closePath();
+  shape.holes.push(opening);
+  return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 2, steps: 1 });
+}
+
+function panel(group: THREE.Group, geometry: THREE.BufferGeometry, surface: THREE.Material, x: number, y: number, z: number, decorative = false) {
+  const object = solid(geometry, surface, decorative);
+  object.position.set(x, y, z);
+  group.add(object);
+  return object;
+}
+
+function tube(points: THREE.Vector3[], radius: number, surface: THREE.Material, decorative = false) {
+  return solid(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 10, radius, 5, false), surface, decorative);
+}
+
+export function makeOpenCouch(): THREE.Group {
+  const group = new THREE.Group();
+  const plum = material(0x806fb1, 0.94);
+  const seat = material(0xb6a5de, 0.96);
+  const piping = material(0xdad0ee, 0.83);
+  const wood = material(0x65516b, 0.72, 0.05);
+  const pillowA = material(0x87c6bf, 0.94);
+  const pillowB = material(0xe4b67c, 0.94);
+
+  // The broad seat, inset cushions and soft arms read as a single upholstered sofa.
+  const base = solid(roundedPanel(2.22, 1.16, 0.25, 0.14), wood);
+  base.rotation.x = -Math.PI / 2;
+  base.position.set(0, 0.3, 0);
+  group.add(base);
+  const cushionGeometry = new THREE.SphereGeometry(1, 12, 8);
+  for (const side of [-1, 1]) {
+    const cushion = solid(cushionGeometry, seat);
+    cushion.scale.set(0.53, 0.2, 0.48);
+    cushion.position.set(side * 0.48, 0.64, 0.04);
+    group.add(cushion);
+
+    const back = solid(cushionGeometry, plum);
+    back.scale.set(0.55, 0.49, 0.19);
+    back.position.set(side * 0.48, 1.02, -0.43);
+    back.rotation.x = -0.13;
+    group.add(back);
+
+    const arm = solid(cushionGeometry, plum);
+    arm.scale.set(0.18, 0.37, 0.59);
+    arm.position.set(side * 1.04, 0.78, -0.02);
+    group.add(arm);
+  }
+  const pillowGeometry = new THREE.SphereGeometry(1, 12, 8);
+  for (const [side, surface] of [[-1, pillowA], [1, pillowB]] as const) {
+    const pillow = solid(pillowGeometry, surface);
+    pillow.scale.set(0.26, 0.27, 0.1);
+    pillow.position.set(side * 0.58, 1.03, -0.19);
+    pillow.rotation.z = side * -0.22;
+    group.add(pillow);
+  }
+  const edge = solid(new THREE.CylinderGeometry(0.018, 0.018, 1.9, 6), piping, true);
+  edge.rotation.z = Math.PI / 2;
+  edge.position.set(0, 0.49, 0.47);
+  group.add(edge);
+  const legGeometry = new THREE.CylinderGeometry(0.075, 0.11, 0.25, 7);
+  for (const x of [-0.82, 0.82]) {
+    const leg = solid(legGeometry, wood);
+    leg.position.set(x, 0.14, 0.34);
+    group.add(leg);
+  }
+  const canopy = solid(new THREE.TorusGeometry(1.35, 0.035, 5, 22, Math.PI), pillowA, true);
+  canopy.position.set(0, 0.88, -0.43);
+  group.add(canopy);
+  return group;
+}
+
+export function makeQuant(): THREE.Group {
+  const group = new THREE.Group();
+  group.rotation.y = 0.48;
+  const casing = material(0xdce4df, 0.34, 0.38);
+  const screen = material(0x102e35, 0.49, 0.12);
+  const cyan = material(0x78d8c8, 0.43, 0.09, 0x50a99f, 0.22);
+  const coral = material(0xea8e7d, 0.5, 0.04);
+  const amber = material(0xf1bb75, 0.45, 0.08);
+
+  panel(group, roundedPanel(2.5, 1.78, 0.14, 0.11), casing, 0, 1.28, -0.26);
+  panel(group, roundedPanel(2.31, 1.59, 0.035, 0.06), screen, 0, 1.36, -0.08);
+
+  const bar = new THREE.BoxGeometry(0.25, 1, 0.055);
+  const wick = new THREE.BoxGeometry(0.022, 1, 0.025);
+  const candles: Array<[number, number, number, THREE.Material]> = [
+    [-0.82, 1.08, 0.49, cyan],
+    [-0.28, 1.29, 0.7, cyan],
+    [0.29, 1.19, 0.38, coral],
+    [0.84, 1.52, 0.64, cyan],
+  ];
+  for (const [x, y, height, surface] of candles) {
+    const stem = solid(wick, casing, true);
+    stem.scale.y = height + 0.2;
+    stem.position.set(x, y, -0.008);
+    group.add(stem);
+    const body = solid(bar, surface, true);
+    body.scale.y = height;
+    body.position.set(x, y, 0.019);
+    group.add(body);
+  }
+  // A single measured path adds direction without crowding the candlestick display.
+  const trend = tube([
+    new THREE.Vector3(-1.01, 0.72, 0.06),
+    new THREE.Vector3(-0.7, 0.77, 0.06),
+    new THREE.Vector3(-0.23, 0.89, 0.06),
+    new THREE.Vector3(0.28, 0.8, 0.06),
+    new THREE.Vector3(0.92, 1.01, 0.06),
+  ], 0.017, amber, true);
+  group.add(trend);
+  const neck = solid(new THREE.CylinderGeometry(0.09, 0.12, 0.51, 8), casing);
+  neck.position.y = 0.55;
+  group.add(neck);
+  const foot = solid(new THREE.CylinderGeometry(0.48, 0.6, 0.16, 12), casing);
+  foot.position.y = 0.22;
+  group.add(foot);
+  return group;
+}
+
+export function makeMentalGym(): THREE.Group {
+  const group = new THREE.Group();
+  const cortex = material(0xdda0ae, 0.84);
+  const creases = material(0xa95f7c, 0.88);
+  const steel = material(0xdde6dd, 0.35, 0.48);
+  const plates = material(0x8c79bd, 0.48, 0.2);
+
+  // One organic outline per side creates a broad brain silhouette with a fine midline cleft.
+  const halfOutline = new THREE.Shape();
+  halfOutline.moveTo(-0.06, 1.38);
+  halfOutline.bezierCurveTo(-0.25, 1.27, -0.53, 1.2, -0.7, 1.33);
+  halfOutline.bezierCurveTo(-0.91, 1.37, -1.04, 1.55, -1.02, 1.76);
+  halfOutline.bezierCurveTo(-1.08, 1.92, -1.02, 2.13, -0.91, 2.21);
+  halfOutline.bezierCurveTo(-0.83, 2.37, -0.64, 2.41, -0.52, 2.36);
+  halfOutline.bezierCurveTo(-0.35, 2.48, -0.15, 2.43, -0.06, 2.32);
+  halfOutline.lineTo(-0.06, 1.38);
+  const halfGeometry = new THREE.ExtrudeGeometry(halfOutline, {
+    depth: 0.55,
+    bevelEnabled: true,
+    // Leave a real gap at the midline after the bevel expands each outline.
+    bevelSize: 0.05,
+    bevelThickness: 0.09,
+    bevelSegments: 3,
+    curveSegments: 5,
+    steps: 1,
+  });
+  const foldPaths: Array<Array<[number, number]>> = [
+    [[-0.16, 2.18], [-0.3, 2.29], [-0.45, 2.17], [-0.64, 2.27], [-0.78, 2.2]],
+    [[-0.14, 1.98], [-0.31, 2.05], [-0.49, 1.92], [-0.68, 2.02], [-0.85, 1.95]],
+    [[-0.16, 1.72], [-0.34, 1.8], [-0.52, 1.64], [-0.7, 1.71], [-0.84, 1.63]],
+    [[-0.48, 1.93], [-0.55, 1.84], [-0.51, 1.74]],
+  ];
+
+  for (const side of [-1, 1]) {
+    const hemi = solid(halfGeometry, cortex);
+    hemi.scale.x = side === -1 ? 1 : -1;
+    hemi.position.z = -0.275;
+    group.add(hemi);
+
+    for (const points of foldPaths) {
+      const fold = tube(points.map(([x, y]) => new THREE.Vector3(side * -x, y, 0.372)), 0.027, creases, true);
+      group.add(fold);
+    }
+  }
+
+  // The barbell crosses the foreground, keeping the exercise metaphor clear.
+  const bar = solid(new THREE.CylinderGeometry(0.075, 0.075, 2.65, 8), steel);
+  bar.rotation.z = Math.PI / 2;
+  bar.position.set(0, 0.65, 0.59);
+  group.add(bar);
+  const plateGeometry = new THREE.CylinderGeometry(0.42, 0.42, 0.17, 12);
+  for (const x of [-1.11, -0.85, 0.85, 1.11]) {
+    const plate = solid(plateGeometry, plates);
+    plate.rotation.z = Math.PI / 2;
+    plate.position.set(x, 0.65, 0.59);
+    group.add(plate);
+  }
+  return group;
+}
+
+export function makeClaudeAnatomy(): THREE.Group {
+  const group = new THREE.Group();
+  // The home view is northeast of this island; turn the terminal toward it.
+  group.rotation.y = 0.63;
+  const copper = material(0xd89b7c, 0.38, 0.36);
+  const dark = material(0x193038, 0.56, 0.16);
+  const trace = material(0x79d6c7, 0.42, 0.1, 0x4fb5a6, 0.28);
+  const signal = material(0xf2be79, 0.32, 0.17, 0xf2be79, 1.1);
+  const glass = new THREE.MeshStandardMaterial({ color: 0x92d7d0, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide });
+
+  // Slight horizontal fanning gives all three layers a silhouette from home.
+  const layers = [0, 1, 2].map(index => {
+    const layer = new THREE.Group();
+    layer.name = `anatomy-layer-${index}`;
+    layer.position.set((index - 1) * 0.33, 1.59 + index * 0.1, (index - 1) * 0.51);
+    group.add(layer);
+    return layer;
+  });
+  panel(layers[0], roundedPanel(1.93, 1.53, 0.11, 0.12), copper, 0, 0, 0);
+  panel(layers[0], roundedPanel(1.72, 1.31, 0.025, 0.06), dark, 0, 0, 0.13);
+
+  panel(layers[1], roundedPanel(1.74, 1.34, 0.07, 0.1), dark, 0, 0, 0);
+  const core = panel(layers[1], roundedPanel(0.59, 0.5, 0.13, 0.08), signal, 0, 0, 0.12);
+  core.name = 'anatomy-core';
+  for (const side of [-1, 1]) {
+    const circuit = tube([
+      new THREE.Vector3(side * 0.3, 0, 0.11),
+      new THREE.Vector3(side * 0.5, 0, 0.11),
+      new THREE.Vector3(side * 0.5, side * 0.33, 0.11),
+      new THREE.Vector3(side * 0.72, side * 0.33, 0.11),
+    ], 0.024, trace, true);
+    layers[1].add(circuit);
+    panel(layers[1], roundedPanel(0.19, 0.18, 0.04, 0.03), copper, side * 0.73, side * 0.33, 0.11, true);
+  }
+
+  panel(layers[2], roundedFrame(1.88, 1.47, 0.04, 0.12, 0.11), copper, 0, 0, 0);
+  panel(layers[2], roundedPanel(1.68, 1.27, 0.01, 0.08), glass, 0, 0, 0.06, true);
+  const prompt = tube([
+    new THREE.Vector3(-0.47, 0.17, 0.09),
+    new THREE.Vector3(-0.23, 0, 0.09),
+    new THREE.Vector3(-0.47, -0.17, 0.09),
+  ], 0.035, signal, true);
+  layers[2].add(prompt);
+  panel(layers[2], roundedPanel(0.31, 0.045, 0.025, 0.018), trace, 0.11, -0.17, 0.08, true);
+
+  const foot = solid(new THREE.CylinderGeometry(0.74, 0.9, 0.16, 10), dark);
+  foot.position.y = 0.17;
+  group.add(foot);
+  const stem = solid(new THREE.CylinderGeometry(0.075, 0.1, 0.55, 8), copper);
+  stem.position.set(0, 0.5, -0.35);
+  group.add(stem);
+  return group;
+}

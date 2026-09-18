@@ -8,6 +8,7 @@ import { createCameraJourney } from './cameraJourney';
 import { createTravelTrail } from './travelTrail';
 import { createLandmarkReactions } from './landmarkReactions';
 import { createUniverseAtmosphere } from './universeAtmosphere';
+import { SUN_POSITION } from './celestialScenery';
 
 export type ExplorationSceneProps = {
   destination: ProjectId | null;
@@ -16,11 +17,12 @@ export type ExplorationSceneProps = {
   navigationRequest: number;
   motionEnabled: boolean;
   onArrive: (id: ProjectId) => void;
+  onDepart: () => void;
   onReady?: () => void;
 };
 
 const ids = Object.keys(projects) as ProjectId[];
-const labelHeights: Record<ProjectId, number> = { 'gem-dota': 3.95, wisp: 3.35, krill: 3.75, opencouch: 2.45, nimble: 2.9, quantrl: 3.55, 'fractional-bonds': 3.55, 'shipping-ml': 4.2, 'mental-gym': 3.2, 'claude-code-anatomy': 3.45 };
+const labelHeights: Record<ProjectId, number> = { 'gem-dota': 3.95, wisp: 3.35, krill: 3.75, opencouch: 2.45, nimble: 2.9, quantrl: 3.55, 'fractional-bonds': 3.55, 'shipping-ml': 3.45, 'mental-gym': 3.2, 'claude-code-anatomy': 3.45 };
 
 const rootStyle = {
   position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden',
@@ -29,13 +31,13 @@ const rootStyle = {
 
 const labelStyle = {
   position: 'absolute', left: 0, top: 0, zIndex: 3, display: 'flex', alignItems: 'center', gap: '7px',
-  minHeight: '30px', padding: '6px 9px 6px 7px', border: '1px solid rgba(217,249,145,.34)', borderRadius: '999px',
+  minHeight: '30px', padding: '6px 9px 6px 7px', border: 0, borderRadius: '999px',
   // No backdrop-filter: blurring 10 pills over the live WebGL canvas costs the
   // compositor a re-blur every frame. A more opaque background reads the same.
   color: '#edf2e8', background: 'rgba(7,14,16,.94)',
-  boxShadow: '0 8px 26px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.025)',
+  boxShadow: '0 8px 26px rgba(0,0,0,.28)',
   font: '600 10px/1 "IBM Plex Mono", monospace', letterSpacing: '.035em', whiteSpace: 'nowrap', cursor: 'pointer',
-  willChange: 'transform, opacity', transition: 'opacity 180ms ease, border-color 180ms ease, background 180ms ease',
+  willChange: 'transform, opacity', transition: 'opacity 180ms ease, background 180ms ease',
 } as const;
 
 const markerStyle = {
@@ -85,8 +87,8 @@ function ProjectButton({ id, index, buttonRef, onChoose, onLook }: {
       onPointerLeave={() => onLook(null)}
       style={labelStyle}
       className="world-project-label"
-      onFocus={(event) => { onLook(id); event.currentTarget.style.borderColor = '#d9f991'; event.currentTarget.style.background = 'rgba(20,31,32,.96)'; }}
-      onBlur={(event) => { onLook(null); event.currentTarget.style.borderColor = 'rgba(217,249,145,.34)'; event.currentTarget.style.background = 'rgba(7,14,16,.82)'; }}
+      onFocus={() => onLook(id)}
+      onBlur={() => onLook(null)}
     >
       <span aria-hidden="true" style={markerStyle}>{String(index + 1).padStart(2, '0')}</span>
       <span className="world-project-name">{project.mapName ?? project.name}</span>
@@ -94,24 +96,27 @@ function ProjectButton({ id, index, buttonRef, onChoose, onLook }: {
   );
 }
 
-export function ExplorationScene({ destination, selectedProject, detailProject, navigationRequest, motionEnabled, onArrive, onReady }: ExplorationSceneProps) {
+export function ExplorationScene({ destination, selectedProject, detailProject, navigationRequest, motionEnabled, onArrive, onDepart, onReady }: ExplorationSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef(new Map<ProjectId, HTMLButtonElement>());
-  const leaderRefs = useRef(new Map<ProjectId, SVGLineElement>());
   const navigateRef = useRef<(id: ProjectId) => void>(() => undefined);
   const cameraActionsRef = useRef<CameraActions>(emptyCameraActions);
   const focusRef = useRef<(id: ProjectId | null) => void>(() => undefined);
   const lookingAtRef = useRef<ProjectId | null>(null);
   const onArriveRef = useRef(onArrive);
+  const onDepartRef = useRef(onDepart);
   const onReadyRef = useRef(onReady);
   const motionRef = useRef(motionEnabled);
+  const wakeRef = useRef<(force?: boolean, labels?: boolean) => void>(() => undefined);
   const detailProjectRef = useRef(detailProject);
   detailProjectRef.current = detailProject;
   const [failed, setFailed] = useState(false);
 
   useEffect(() => { onArriveRef.current = onArrive; }, [onArrive]);
+  useEffect(() => { onDepartRef.current = onDepart; }, [onDepart]);
   useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
-  useEffect(() => { motionRef.current = motionEnabled; }, [motionEnabled]);
+  useEffect(() => { motionRef.current = motionEnabled; wakeRef.current(true); }, [motionEnabled]);
+  useEffect(() => { wakeRef.current(true); }, [detailProject]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -134,22 +139,24 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     camera.position.set(17, 18, 22);
     scene.add(camera);
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth < 700 ? 1.5 : 1.75));
+    // Pixel ratio is sized once with the viewport below, then stays fixed
+    // through gestures so the drawing buffer is not repeatedly reallocated.
     renderer.setClearColor(0x061012, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.16;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.autoUpdate = false;
     renderer.domElement.tabIndex = 0;
     renderer.domElement.setAttribute('role', 'application');
     renderer.domElement.setAttribute('aria-label', 'Playable project universe. Scroll to read more of the page. Drag with a mouse to orbit, hold Ctrl while scrolling or pinch to zoom, and use WASD or arrow keys to pilot the explorer. On touchscreens, swipe to scroll and use the camera buttons to rotate. Select a project marker or tap an island to travel.');
-    renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;outline:1px solid transparent;outline-offset:-4px;cursor:grab;';
+    renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;cursor:grab;';
     host.prepend(renderer.domElement);
 
-    const homeTarget = new THREE.Vector3(0, 0.8, 0);
+    const homeTarget = new THREE.Vector3(0.5, 0.8, 0.5);
     const homeDirection = new THREE.Vector3(15, 14, 21).normalize();
-    let homeDistance = 30.5;
+    let homeDistance = 33;
     camera.position.copy(homeTarget).addScaledVector(homeDirection, homeDistance);
     const controls = new OrbitControls(camera, renderer.domElement);
     // OrbitControls defaults to blocking page gestures. Keep one-finger scrolling
@@ -180,16 +187,17 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     sun.position.set(-12, 22, 14);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.left = -18;
-    sun.shadow.camera.right = 18;
-    sun.shadow.camera.top = 15;
-    sun.shadow.camera.bottom = -15;
+    sun.shadow.camera.left = -21;
+    sun.shadow.camera.right = 21;
+    sun.shadow.camera.top = 18;
+    sun.shadow.camera.bottom = -18;
     sun.shadow.camera.near = 2;
     sun.shadow.camera.far = 55;
     sun.shadow.bias = -0.0002;
     scene.add(sun);
-    const rim = new THREE.DirectionalLight(0x8aafff, 3.0);
-    rim.position.set(16, 10, -18);
+    // Reuse the existing rim light for warm highlights from the visible sun.
+    const rim = new THREE.DirectionalLight(0xffcf94, 2.2);
+    rim.position.copy(SUN_POSITION);
     scene.add(rim);
 
     const world = buildWorld();
@@ -204,9 +212,10 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       if (object instanceof THREE.Mesh && object.material instanceof THREE.MeshPhysicalMaterial) object.material.envMap = environment.texture;
     });
     const reactions = createLandmarkReactions(world.group);
-    const travelTrail = createTravelTrail();
+    const travelTrail = createTravelTrail(world.explorer);
     scene.add(travelTrail.object);
     const pickableProjects = [...world.pickers.keys()];
+    const hoverPickableProjects = [...world.hoverPickers.keys()];
     let hoveredProject: ProjectId | null = null;
     let lastHoverCheck = 0;
     const hoverPointer = new THREE.Vector2();
@@ -234,22 +243,28 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         if (!compact) point.addScaledVector(new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), THREE.MathUtils.clamp((1100 - width) / 140, 0, 3));
         journey.focus(point, THREE.MathUtils.clamp(controls.getDistance() * 0.76, controls.minDistance, compact ? 26 : 23));
       } else journey.restore();
+      interactiveUntil = motionRef.current ? performance.now() + 1400 : 0;
+      labelsDirty = true;
+      wake();
     };
     const interruptJourney = () => {
       interactiveUntil = performance.now() + 900;
-      nextRenderAt = 0;
       journey.interrupt();
+      wake();
     };
-    const continueInteraction = () => { nextRenderAt = 0; };
+    const continueInteraction = () => {
+      interactiveUntil = performance.now() + 350;
+      wake();
+    };
     const finishInteraction = () => {
       interactiveUntil = performance.now() + 350;
-      nextRenderAt = 0;
+      wake();
     };
     controls.addEventListener('start', interruptJourney);
     controls.addEventListener('change', continueInteraction);
     controls.addEventListener('end', finishInteraction);
 
-    const atmosphere = createUniverseAtmosphere(renderer.getPixelRatio());
+    const atmosphere = createUniverseAtmosphere(renderer);
     scene.add(atmosphere.object);
 
     const current = new THREE.Vector3(0, 0, 0.4);
@@ -273,21 +288,26 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     let height = 1;
     let compact = false;
     let lastTime = performance.now();
+    let lastShadowTime = -Infinity;
+    let measuredFrames = 0;
+    let measurementStartedAt = performance.now();
     let nextRenderAt = 0;
+    let rendering = false;
     let interactiveUntil = 0;
-    let wasInteractive = false;
-    let renderPixelRatio = renderer.getPixelRatio();
+    let labelsDirty = true;
+    let forceDraw = true;
+    let lastCameraStamp = '';
+    const labelSizes = new Map<ProjectId, { width: number; height: number }>();
     let lastPositionStamp = '';
-    // With motion paused the scene is static, so the loop keeps ticking but only
-    // pays for a draw when this signature of the visible state actually changes.
+    let lastHeading = '';
+    let lastLookTarget = '';
     let lastIdleStamp = '';
     let idleSince = 0;
     const activePointers = new Set<number>();
     let tapGesture: { pointerId: number; x: number; y: number; moved: number; multi: boolean; button: number } | null = null;
-    let introBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+    let overlayBounds: Array<{ left: number; top: number; right: number; bottom: number }> = [];
 
     const setWaypoint = (id: ProjectId) => {
-      nextRenderAt = 0;
       targetProject = id;
       target.copy(WORLD_POINTS[id]);
       const approach = new THREE.Vector3(-target.x, 0, -target.z);
@@ -303,6 +323,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         arrivedAt = id;
         onArriveRef.current(id);
       }
+      labelsDirty = true;
+      wake();
     };
     navigateRef.current = setWaypoint;
 
@@ -324,7 +346,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
 
     const positionLabels = () => {
       // CSS recession scales the canvas and labels together; work in local pixels.
-      const rect = { width: host.clientWidth, height: host.clientHeight };
+      const rect = { width, height };
       const scale = compact ? 0.88 : 1;
       const margin = compact ? 9 : 14;
       const bottomReserve = compact ? 26 + Math.ceil(ids.length / 3) * 30 : 12;
@@ -334,13 +356,13 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         const button = labelRefs.current.get(id);
         if (!button) return null;
         projected.copy(WORLD_POINTS[id]);
-        projected.y += 2.1 + (landmarks.find(item => item.id === id)?.lift ?? 0);
+        projected.y += 2.1 + landmarks[index].lift;
         projected.project(camera);
         button.dataset.anchorX = (projected.x * .5 + .5).toFixed(4);
         button.dataset.anchorY = (-projected.y * .5 + .5).toFixed(4);
         button.dataset.anchorVisible = String(projected.z > -1 && projected.z < 1 && Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1);
         projected.copy(WORLD_POINTS[id]);
-        projected.y += 0.9 + labelHeights[id] + (landmarks.find(item => item.id === id)?.lift ?? 0);
+        projected.y += 0.9 + labelHeights[id] + landmarks[index].lift;
         projected.project(camera);
         const onScreen = projected.z > -1 && projected.z < 1 && Math.abs(projected.x) < 1.08 && Math.abs(projected.y) < 1.08;
         return {
@@ -351,8 +373,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           depth: projected.z,
           sourceX: (projected.x * 0.5 + 0.5) * rect.width,
           sourceY: (-projected.y * 0.5 + 0.5) * rect.height + (index % 2 ? 3 : -3),
-          width: Math.max(26, button.offsetWidth * scale),
-          height: Math.max(26, button.offsetHeight * scale),
+          width: Math.max(26, labelSizes.get(id)?.width ?? 30) * scale,
+          height: Math.max(26, labelSizes.get(id)?.height ?? 30) * scale,
         };
       }).filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
 
@@ -363,15 +385,15 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       });
 
       const occupied: Array<{ left: number; top: number; right: number; bottom: number }> = compact
-        ? [{ left: Math.max(0, rect.width - 205), top: 0, right: rect.width, bottom: 76 }]
+        ? [{ left: Math.max(0, rect.width - 205), top: 74, right: rect.width, bottom: 126 }]
         : [
             { left: Math.max(0, rect.width - 260), top: Math.max(0, rect.height - 62), right: rect.width, bottom: rect.height },
           ];
-      if (!compact && introBounds.right > 0 && introBounds.bottom > 0) occupied.push(introBounds);
-      const verticalOffsets = [0, -36, 36, -72, 72, -108, 108];
-      const horizontalOffsets = [0, 54, -54, 92, -92, 130, -130];
+      occupied.push(...overlayBounds);
+      // Numbered mobile markers stay above their own island when they crowd.
+      const verticalOffsets = compact ? [0, -28, 28, -56, 56, -84, 84] : [0, -36, 36, -72, 72, -108, 108];
+      const horizontalOffsets = compact ? [0] : [0, 54, -54, 92, -92, 130, -130];
       candidates.forEach(({ id, button, onScreen, sourceX, sourceY, width: labelWidth, height: labelHeight }) => {
-        const leader = leaderRefs.current.get(id);
         let position: { x: number; y: number; box: { left: number; top: number; right: number; bottom: number } } | null = null;
         if (onScreen) {
           for (const yOffset of verticalOffsets) {
@@ -404,81 +426,91 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         button.style.zIndex = priorityProject === id ? '5' : '3';
         button.tabIndex = visibleLabel ? 0 : -1;
         button.setAttribute('aria-hidden', visibleLabel ? 'false' : 'true');
-        const displaced = Boolean(position && (Math.abs(position.x - sourceX) > 2 || Math.abs(position.y - sourceY) > 2));
-        button.dataset.displaced = displaced ? 'true' : 'false';
-        if (leader) {
-          leader.setAttribute('x1', sourceX.toFixed(1));
-          leader.setAttribute('y1', sourceY.toFixed(1));
-          leader.setAttribute('x2', x.toFixed(1));
-          leader.setAttribute('y2', y.toFixed(1));
-          leader.style.opacity = displaced && visibleLabel ? (subdued ? '0.12' : '0.48') : '0';
-        }
       });
     };
 
+    const refreshLabelSizes = () => {
+      // Read all label sizes together, outside the frame's style-write phase.
+      ids.forEach(id => {
+        const button = labelRefs.current.get(id);
+        if (button) labelSizes.set(id, { width: button.offsetWidth, height: button.offsetHeight });
+      });
+      labelsDirty = true;
+      wake();
+    };
+
+    let resizePending = false;
     const resize = () => {
+      // Changing a WebGL drawing buffer clears it. Keep the frozen frame intact
+      // during scroll locking or viewport changes, and resize when it resumes.
+      if (detailProjectRef.current) { resizePending = true; return; }
       const rect = { width: host.clientWidth, height: host.clientHeight };
       if (rect.width < 2 || rect.height < 2) return;
       width = Math.max(1, Math.round(rect.width));
       height = Math.max(1, Math.round(rect.height));
       compact = width < 700;
       host.dataset.compact = compact ? 'true' : 'false';
-      const hostRect = host.getBoundingClientRect();
-      const intro = host.closest('.playground')?.querySelector<HTMLElement>('.playground-intro');
-      if (intro) {
-        const introRect = intro.getBoundingClientRect();
-        const bottom = introRect.bottom - hostRect.top;
-        if (bottom > 0) {
-          introBounds = {
-            left: 0,
-            top: 0,
-            right: Math.max(0, introRect.right - hostRect.left + 16),
-            bottom: bottom + 12,
-          };
-        } else {
-          introBounds = { left: 0, top: 0, right: 0, bottom: 0 };
-        }
+      // Preserve Retina edges on the sculptures. Soft atmosphere and shadow
+      // updates have their own budgets instead of lowering the whole canvas.
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      if (pixelRatio !== renderer.getPixelRatio()) {
+        renderer.setPixelRatio(pixelRatio);
+        atmosphere.setPixelRatio(pixelRatio);
       }
+      travelTrail.setPixelRatio(pixelRatio);
+      const hostRect = host.getBoundingClientRect();
+      // Labels avoid both the introduction and the prominent navigation guide.
+      const overlays = host.closest('.playground')?.querySelectorAll<HTMLElement>('.playground-intro, .playground-controls');
+      overlayBounds = Array.from(overlays ?? []).flatMap(element => {
+        const bounds = element.getBoundingClientRect();
+        const bottom = bounds.bottom - hostRect.top;
+        return bottom > 0 ? [{
+          left: Math.max(0, bounds.left - hostRect.left - 12),
+          top: Math.max(0, bounds.top - hostRect.top - 12),
+          right: Math.min(width, bounds.right - hostRect.left + 12),
+          bottom: bottom + 12,
+        }] : [];
+      });
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       camera.fov = compact ? 54 : width / height < 1.15 ? 47 : 41;
       camera.updateProjectionMatrix();
       const previousHomeDistance = homeDistance;
       const distanceRatio = previousHomeDistance > 0 ? controls.getDistance() / previousHomeDistance : 1;
-      const nextHomeTarget = compact ? new THREE.Vector3(2.6, 0.3, 2.3) : new THREE.Vector3(0, 0.8, 0);
+      const nextHomeTarget = compact ? new THREE.Vector3(3.0, 0.4, 2.6) : new THREE.Vector3(0.5, 0.8, 0.5);
       if (!focusedProject) {
         const shift = nextHomeTarget.clone().sub(homeTarget);
         controls.target.add(shift);
         camera.position.add(shift);
       }
       homeTarget.copy(nextHomeTarget);
-      homeDistance = compact ? Math.max(30.5, 31.3 / camera.aspect) : camera.aspect < 1.15 ? 35 : 30.5;
+      // Keep the outer islands in frame on narrow screens while preserving the
+      // closer desktop view and its open space around the explorer.
+      homeDistance = compact ? Math.max(33, 39 / camera.aspect) : Math.max(33, 58 / camera.aspect);
       const viewDirection = camera.position.clone().sub(controls.target).normalize();
       camera.position.copy(controls.target).addScaledVector(viewDirection, THREE.MathUtils.clamp(homeDistance * distanceRatio, controls.minDistance, controls.maxDistance));
       controls.update();
-      render(performance.now(), true);
+      refreshLabelSizes();
+      forceDraw = true;
+      wake();
     };
 
-    const render = (now: number, force = false) => {
-      if (disposed || (!force && (!visible || !documentVisible))) return;
+    const render = (now: number) => {
+      frame = 0;
+      if (disposed || !visible || !documentVisible || detailProjectRef.current) return;
+      rendering = true;
       const interactive = keys.size > 0 || activePointers.size > 0 || target.distanceToSquared(current) > .01 || now < interactiveUntil;
-      const needsFrame = interactive || hoverPending;
-      if (interactive !== wasInteractive) {
-        wasInteractive = interactive;
-        const nextPixelRatio = Math.min(window.devicePixelRatio || 1, compact ? (interactive ? 1.25 : 1.5) : (interactive ? 1.5 : 1.75));
-        if (nextPixelRatio !== renderPixelRatio) {
-          renderPixelRatio = nextPixelRatio;
-          renderer.setPixelRatio(renderPixelRatio);
-          renderer.setSize(width, height, false);
-        }
-        nextRenderAt = 0;
-      }
-      const frameInterval = motionRef.current && needsFrame ? 1000 / 30 : Number.POSITIVE_INFINITY;
-      if (!force && now < nextRenderAt) {
-        frame = requestAnimationFrame(render);
+      const frameInterval = interactive || hoverPending ? 1000 / 60 : 1000 / 30;
+      if (!forceDraw && now + 2 < nextRenderAt) {
+        rendering = false;
+        scheduleFrame();
         return;
       }
-      nextRenderAt = now + frameInterval;
+      // Keep the cadence anchored when a browser frame arrives slightly late;
+      // starting a fresh interval each time compounds jitter into skipped frames.
+      nextRenderAt = forceDraw || nextRenderAt === 0
+        ? now + frameInterval
+        : nextRenderAt + Math.max(1, Math.floor((now - nextRenderAt) / frameInterval) + 1) * frameInterval;
       const dt = Math.min(0.08, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
       const forwardInput = (keys.has('arrowup') || keys.has('w') ? 1 : 0) - (keys.has('arrowdown') || keys.has('s') ? 1 : 0);
@@ -508,6 +540,18 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       const animate = motionRef.current;
       arrivalReaction = animate ? Math.min(1, arrivalReaction + dt / 0.8) : 1;
       const greeting = Math.sin(arrivalReaction * Math.PI);
+      journey.update(dt, animate);
+      controls.update(dt);
+      camera.updateMatrixWorld();
+      if (hoverPending && now - lastHoverCheck > 16) {
+        hoverPending = false;
+        lastHoverCheck = now;
+        hoverPickableProjects.forEach(object => object.updateWorldMatrix(true, false));
+        raycaster.setFromCamera(hoverPointer, camera);
+        const hit = raycaster.intersectObjects(hoverPickableProjects, false)[0];
+        hoveredProject = hit ? world.hoverPickers.get(hit.object) ?? null : null;
+        renderer.domElement.style.cursor = hoveredProject ? 'pointer' : 'grab';
+      }
       const lookAt = lookingAtRef.current ?? hoveredProject ?? focusedProject;
       if (lookAt && target.distanceToSquared(current) < 0.04 && !move.lengthSq()) {
         const targetPos = WORLD_POINTS[lookAt].clone();
@@ -517,8 +561,10 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       }
       world.explorer.position.set(current.x, current.y + 1.58 + (animate ? Math.sin(now * 0.003) * 0.1 + greeting * 0.24 : 0), current.z);
       world.explorer.quaternion.slerp(explorerTargetQuat, animate ? 1 - Math.exp(-22 * dt) : 1);
-      host.dataset.explorerHeading = world.explorer.rotation.y.toFixed(3);
-      host.dataset.lookTarget = lookAt ?? '';
+      const heading = world.explorer.rotation.y.toFixed(3);
+      if (heading !== lastHeading) { host.dataset.explorerHeading = heading; lastHeading = heading; }
+      const lookTarget = lookAt ?? '';
+      if (lookTarget !== lastLookTarget) { host.dataset.lookTarget = lookTarget; lastLookTarget = lookTarget; }
       world.hoverLight.intensity = animate ? 2.15 + Math.sin(now * 0.007) * 0.45 + greeting * 1.3 : 2.25;
       const positionStamp = `${current.x.toFixed(2)},${current.y.toFixed(2)},${current.z.toFixed(2)}`;
       if (positionStamp !== lastPositionStamp) {
@@ -526,6 +572,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         host.dataset.explorerY = current.y.toFixed(2);
         host.dataset.explorerZ = current.z.toFixed(2);
         lastPositionStamp = positionStamp;
+        labelsDirty = true;
       }
 
       // Strip last frame's focus offset before the landmark's own bob is evaluated.
@@ -545,12 +592,14 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         });
       }
       landmarks.forEach(item => {
-        const lift = focusedProject === item.id ? (detailProjectRef.current === item.id ? .9 : .5) : 0;
+        const lift = focusedProject === item.id ? .5 : 0;
+        const previousLift = item.lift;
         item.lift = animate ? THREE.MathUtils.damp(item.lift, lift, 6, dt) : lift;
         item.root.position.y += item.lift;
+        if (Math.abs(item.lift - previousLift) > .001) labelsDirty = true;
       });
       reactions.update(dt, animate, lookingAtRef.current ?? hoveredProject ?? focusedProject, world.explorer.position, camera.position);
-      travelTrail.update(world.explorer.position, move.lengthSq() > 0 || target.distanceToSquared(current) > .01, dt, animate);
+      travelTrail.update(move.lengthSq() > 0 || target.distanceToSquared(current) > .01, dt, animate);
 
       let nearest: ProjectId | null = null;
       let nearestDistance = Infinity;
@@ -558,7 +607,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         const distance = current.distanceTo(WORLD_POINTS[id]);
         if (distance < nearestDistance) { nearest = id; nearestDistance = distance; }
       });
-      const arrivalAllowed = !targetProject || nearest === targetProject;
+      // Passing an island during manual flight must not start another close-up.
+      const arrivalAllowed = keys.size === 0 && (!targetProject || nearest === targetProject);
       if (nearest && arrivalAllowed && nearestDistance < 1.72 && arrivedAt !== nearest) {
         arrivedAt = nearest;
         onArriveRef.current(nearest);
@@ -566,27 +616,22 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         arrivedAt = null;
       }
 
-      journey.update(dt, animate);
-      controls.update(dt);
-      camera.updateMatrixWorld();
-      if (hoverPending && now - lastHoverCheck > 16) {
-        hoverPending = false;
-        lastHoverCheck = now;
-        world.group.updateMatrixWorld(true);
-        raycaster.setFromCamera(hoverPointer, camera);
-        const hit = raycaster.intersectObjects(pickableProjects, false)[0];
-        hoveredProject = hit ? world.pickers.get(hit.object) ?? null : null;
-        renderer.domElement.style.cursor = hoveredProject ? 'pointer' : 'grab';
-      }
-      host.dataset.cameraAzimuth = controls.getAzimuthalAngle().toFixed(3);
-      host.dataset.cameraPolar = controls.getPolarAngle().toFixed(3);
-      host.dataset.cameraDistance = controls.getDistance().toFixed(2);
       atmosphere.update(dt, animate, camera);
-      // When motion is paused nothing animates on its own, so a redraw is only
-      // worth its cost once something the viewer can see has moved. Everything
-      // that changes the image contributes to the signature below.
+      const cameraStamp = [camera.position.x, camera.position.y, camera.position.z, controls.target.x, controls.target.y, controls.target.z].join(',');
+      if (cameraStamp !== lastCameraStamp) {
+        lastCameraStamp = cameraStamp;
+        host.dataset.cameraAzimuth = controls.getAzimuthalAngle().toFixed(3);
+        host.dataset.cameraPolar = controls.getPolarAngle().toFixed(3);
+        host.dataset.cameraDistance = controls.getDistance().toFixed(2);
+        labelsDirty = true;
+      }
+      if (labelsDirty) {
+        positionLabels();
+        labelsDirty = false;
+      }
+      // Paused motion draws through a short settling window, then releases rAF.
       let shouldDraw = true;
-      if (!animate && !force) {
+      if (!animate && !forceDraw) {
         const idleStamp = [
           positionStamp,
           camera.position.x.toFixed(3), camera.position.y.toFixed(3), camera.position.z.toFixed(3),
@@ -605,15 +650,34 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         }
       }
       if (shouldDraw) {
-        positionLabels();
+        // The light is fixed. Reuse its shadow map between 30 Hz updates while
+        // the camera and explorer can render at 60 Hz; refresh immediate changes
+        // in paused motion so no stale shadow survives an on-demand redraw.
+        if (forceDraw || !animate || now - lastShadowTime >= 1000 / 30 - 2) {
+          renderer.shadowMap.needsUpdate = true;
+          lastShadowTime = now;
+        }
         renderer.render(scene, camera);
+        if (import.meta.env.DEV) {
+          measuredFrames++;
+          if (now - measurementStartedAt >= 1000) {
+            host.dataset.renderFps = (measuredFrames * 1000 / (now - measurementStartedAt)).toFixed(1);
+            host.dataset.renderCalls = String(renderer.info.render.calls);
+            host.dataset.renderTriangles = String(renderer.info.render.triangles);
+            host.dataset.renderPixelRatio = String(renderer.getPixelRatio());
+            measurementStartedAt = now;
+            measuredFrames = 0;
+          }
+        }
       }
-      if (!force) frame = requestAnimationFrame(render);
+      forceDraw = false;
+      rendering = false;
+      if (animate || interactive || hoverPending || now - idleSince < 500) scheduleFrame();
     };
 
     const redraw = () => {
       controls.update();
-      render(performance.now(), true);
+      wake();
     };
     cameraActionsRef.current = {
       rotate: (direction) => {
@@ -642,18 +706,43 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       },
     };
 
-    const start = () => {
-      if (disposed || frame || !visible || !documentVisible) return;
-      lastTime = performance.now();
+    const scheduleFrame = () => {
+      if (disposed || frame || !visible || !documentVisible || detailProjectRef.current) return;
       frame = requestAnimationFrame(render);
     };
+    const wake = () => {
+      // Keep the last sharp frame while the modal owns interaction. Reuse this
+      // renderer and resume from the same camera position when it closes.
+      if (detailProjectRef.current) {
+        stop();
+        if (import.meta.env.DEV) host.dataset.renderState = 'suspended';
+        return;
+      }
+      if (resizePending) { resizePending = false; resize(); return; }
+      if (import.meta.env.DEV) host.dataset.renderState = 'running';
+      if (!frame && !rendering) {
+        lastTime = performance.now();
+        measurementStartedAt = lastTime;
+        measuredFrames = 0;
+        nextRenderAt = 0;
+        forceDraw = true;
+      } else {
+        nextRenderAt = Math.min(nextRenderAt, lastTime + 1000 / 60);
+      }
+      scheduleFrame();
+    };
+    wakeRef.current = (force = false, labels = false) => {
+      if (force) forceDraw = true;
+      if (labels) labelsDirty = true;
+      wake();
+    };
+    const start = () => { wake(); };
     const stop = () => {
       if (frame) cancelAnimationFrame(frame);
       frame = 0;
     };
 
     const onPointerDown = (event: PointerEvent) => {
-      nextRenderAt = 0;
       hoveredProject = null;
       hoverPending = false;
       activePointers.add(event.pointerId);
@@ -662,13 +751,14 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       } else if (tapGesture) {
         tapGesture.multi = true;
       }
+      wake();
     };
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerType === 'mouse' && activePointers.size === 0) {
-        nextRenderAt = 0;
         const rect = renderer.domElement.getBoundingClientRect();
         hoverPointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
         hoverPending = true;
+        wake();
       }
       if (!tapGesture || tapGesture.pointerId !== event.pointerId) return;
       tapGesture.moved = Math.max(tapGesture.moved, Math.hypot(event.clientX - tapGesture.x, event.clientY - tapGesture.y));
@@ -684,6 +774,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         && activePointers.size === 1,
       );
       activePointers.delete(event.pointerId);
+      wake();
       if (tapGesture?.pointerId === event.pointerId) tapGesture = null;
       if (!isTap) return;
       const rect = renderer.domElement.getBoundingClientRect();
@@ -710,18 +801,26 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       activePointers.delete(event.pointerId);
       if (tapGesture) tapGesture.multi = true;
       if (tapGesture?.pointerId === event.pointerId) tapGesture = null;
+      wake();
     };
     const onPointerLeave = () => {
       hoveredProject = null;
       hoverPending = false;
       interactiveUntil = performance.now() + 250;
       renderer.domElement.style.cursor = 'grab';
+      wake();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(key)) {
-        nextRenderAt = 0;
         if (key.startsWith('arrow')) event.preventDefault();
+        if (focusedProject || targetProject) {
+          targetProject = null;
+          focusRef.current(null);
+          onDepartRef.current();
+          // Keep arrivedAt until we leave the island's radius, so releasing a
+          // movement key beside it cannot immediately reopen the same project.
+        }
         if (!event.repeat) {
           cameraForward.copy(controls.target).sub(camera.position).setY(0);
           if (cameraForward.lengthSq() < 0.001) cameraForward.set(0, 0, -1);
@@ -739,11 +838,12 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           targetProject = null;
         }
         keys.add(key);
+        wake();
       }
     };
-    const onKeyUp = (event: KeyboardEvent) => { keys.delete(event.key.toLowerCase()); };
-    const onBlur = () => { keys.clear(); };
-    const onWindowBlur = () => { keys.clear(); };
+    const onKeyUp = (event: KeyboardEvent) => { keys.delete(event.key.toLowerCase()); wake(); };
+    const onBlur = () => { keys.clear(); wake(); };
+    const onWindowBlur = () => { keys.clear(); activePointers.clear(); tapGesture = null; wake(); };
     const onWheelCapture = (event: WheelEvent) => {
       // Capture runs before OrbitControls can cancel the browser's normal scroll.
       // Trackpad pinch also arrives as a Ctrl-modified wheel event.
@@ -751,7 +851,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     };
     const onVisibility = () => {
       documentVisible = !document.hidden;
-      if (!documentVisible) keys.clear();
+      if (!documentVisible) { keys.clear(); activePointers.clear(); tapGesture = null; }
       if (documentVisible) start(); else stop();
     };
 
@@ -769,6 +869,9 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
 
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(host);
+    const labelResizeObserver = new ResizeObserver(refreshLabelSizes);
+    labelRefs.current.forEach(button => labelResizeObserver.observe(button));
+    document.fonts?.ready.then(() => { if (!disposed) refreshLabelSizes(); });
     const intersectionObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (visible) start(); else stop();
@@ -785,11 +888,13 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       navigateRef.current = () => undefined;
       cameraActionsRef.current = emptyCameraActions;
       focusRef.current = () => undefined;
+      wakeRef.current = () => undefined;
       controls.removeEventListener('start', interruptJourney);
       controls.removeEventListener('change', continueInteraction);
       controls.removeEventListener('end', finishInteraction);
       controls.dispose();
       resizeObserver.disconnect();
+      labelResizeObserver.disconnect();
       intersectionObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
       renderer.domElement.removeEventListener('wheel', onWheelCapture, true);
@@ -817,6 +922,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       });
       geometries.forEach(geometry => geometry.dispose());
       environment.dispose();
+      atmosphere.dispose();
       textures.forEach(texture => texture.dispose());
       renderer.dispose();
       renderer.forceContextLoss();
@@ -848,8 +954,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     <div ref={hostRef} style={rootStyle} data-exploration-world>
       <style>{`
         [data-exploration-world] canvas:focus-visible {
-          outline: 1px solid rgba(217,249,145,.64) !important;
-          outline-offset: -4px !important;
+          outline: none !important;
         }
         .world-camera-toolbar {
           position: absolute;
@@ -859,10 +964,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           display: flex;
           gap: 5px;
           padding: 5px;
-          border: 1px solid rgba(217,249,145,.2);
           border-radius: 999px;
-          background: rgba(7,14,16,.72);
-          backdrop-filter: blur(10px);
+          background: rgba(7,14,16,.94);
           box-shadow: 0 8px 24px rgba(0,0,0,.2);
         }
         .world-camera-toolbar button {
@@ -872,25 +975,23 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           align-items: center;
           justify-content: center;
           padding: 0 8px;
-          border: 1px solid rgba(217,249,145,.18);
+          border: 0;
           border-radius: 999px;
           color: #edf2e8;
           background: rgba(255,255,255,.035);
           font: 600 10px/1 "IBM Plex Mono", monospace;
           cursor: pointer;
         }
-        .world-camera-toolbar button:hover { border-color: rgba(217,249,145,.6); background: rgba(217,249,145,.1); }
+        .world-camera-toolbar button:hover { background: rgba(217,249,145,.1); }
         .world-camera-toolbar button:focus-visible { outline: 1px solid #d9f991; outline-offset: 2px; }
         .world-project-label:hover,
         .world-project-label:focus-visible {
-          border-color: #d9f991 !important;
           background: rgba(20,31,32,.96) !important;
         }
-        .world-touch-hint { display: none; }
         .world-destination-legend { display: none; }
         @media (max-width: 700px) {
           .world-camera-toolbar {
-            top: 10px;
+            top: 80px;
             right: 10px;
             bottom: auto;
             gap: 3px;
@@ -898,22 +999,10 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           }
           .world-camera-toolbar button { min-width: 28px; height: 28px; padding: 0 6px; font-size: 9px; }
           .world-camera-toolbar .world-reset-label { display: none; }
-          .world-touch-hint {
-            position: absolute;
-            z-index: 6;
-            top: 51px;
-            right: 12px;
-            display: block;
-            color: rgba(237,242,232,.62);
-            font: 600 8px/1.2 "IBM Plex Mono", monospace;
-            letter-spacing: .06em;
-            pointer-events: none;
-          }
           .world-project-label {
             min-width: 26px !important;
             min-height: 26px !important;
             padding: 4px !important;
-            border-color: rgba(217,249,145,.48) !important;
             background: rgba(7,14,16,.72) !important;
           }
           .world-project-label .world-project-name { display: none; }
@@ -938,11 +1027,10 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
             align-items: center;
             gap: 5px;
             padding: 0 6px;
-            border: 1px solid rgba(217,249,145,.22);
+            border: 0;
             border-radius: 4px;
             color: rgba(237,242,232,.88);
-            background: rgba(7,14,16,.78);
-            backdrop-filter: blur(8px);
+            background: rgba(7,14,16,.94);
             font: 600 9px/1 "IBM Plex Mono", monospace;
             letter-spacing: -.01em;
             overflow: hidden;
@@ -971,26 +1059,13 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         }
       `}</style>
       <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: 'radial-gradient(ellipse at 55% 55%, rgba(7,15,17,.1), transparent 72%)' }} />
-      <svg aria-hidden="true" width="100%" height="100%" style={{ position: 'absolute', inset: 0, zIndex: 2, overflow: 'visible', pointerEvents: 'none' }}>
-        {ids.map(id => (
-          <line
-            key={id}
-            ref={(element) => { if (element) leaderRefs.current.set(id, element); else leaderRefs.current.delete(id); }}
-            stroke="rgba(217,249,145,.7)"
-            strokeWidth="1"
-            strokeDasharray="2 4"
-            vectorEffect="non-scaling-stroke"
-            style={{ opacity: 0, transition: 'opacity 180ms ease' }}
-          />
-        ))}
-      </svg>
       {ids.map((id, index) => (
         <ProjectButton
           key={id}
           id={id}
           index={index}
           buttonRef={(element) => { if (element) labelRefs.current.set(id, element); else labelRefs.current.delete(id); }}
-          onLook={id => { lookingAtRef.current = id; }}
+          onLook={id => { lookingAtRef.current = id; wakeRef.current(false, true); }}
           onChoose={(next) => navigateRef.current(next)}
         />
       ))}
@@ -1001,7 +1076,6 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         <button type="button" onClick={() => cameraActionsRef.current.zoom(1)} aria-label="Zoom out" title="Zoom out">&minus;</button>
         <button type="button" onClick={() => cameraActionsRef.current.reset()} aria-label="Reset universe view" title="Reset universe view"><span aria-hidden="true">&#8634;</span><span className="world-reset-label">&nbsp;RESET</span></button>
       </div>
-      <div className="world-touch-hint" aria-hidden="true">SWIPE TO SCROLL · PINCH TO ZOOM</div>
       <nav className="world-destination-legend" aria-label="World destinations">
         {ids.map((id, index) => (
           <button key={id} type="button" onClick={() => navigateRef.current(id)} aria-label={`Navigate to ${projects[id].name}`}>

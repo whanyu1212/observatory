@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="500" viewBox="0 0 600 500">
+  <defs>
+    <path id="star" d="M0-1 .2-.2 1 0 .2.2 0 1-.2.2-1 0-.2-.2Z"/>
+    <path id="diamond" d="M0-1 .65 0 0 1-.65 0Z"/>
+    <path id="cross" d="M-.13-1H.13V-.13H1V.13H.13V1H-.13V.13H-1V-.13H-.13Z"/>
+  </defs>
+  <g fill="#e7efff">
+    <circle cx="18" cy="24" r=".8" opacity=".5"/>
+    <use href="#star" transform="translate(51 91) scale(3.12)" opacity=".72"/>
+    <use href="#star" transform="translate(83 42) scale(1.82)" opacity=".44"/>
+    <use href="#star" transform="translate(114 151) scale(2.34)" opacity=".58"/>
+    <use href="#diamond" transform="translate(147 18) scale(2.52)" opacity=".77"/>
+    <use href="#star" transform="translate(176 112) scale(1.82)" opacity=".46"/>
+    <use href="#star" transform="translate(208 67) scale(2.60)" opacity=".64"/>
+    <use href="#cross" transform="translate(242 174) scale(1.68)" opacity=".51"/>
+    <use href="#diamond" transform="translate(271 31) scale(2.16)" opacity=".7"/>
+    <circle cx="304" cy="128" r=".7" opacity=".42"/>
+    <use href="#star" transform="translate(336 79) scale(2.34)" opacity=".59"/>
+    <use href="#star" transform="translate(368 188) scale(3.38)" opacity=".74"/>
+    <circle cx="397" cy="22" r=".7" opacity=".47"/>
+    <use href="#star" transform="translate(432 106) scale(2.60)" opacity=".65"/>
+    <use href="#cross" transform="translate(461 58) scale(1.68)" opacity=".54"/>
+    <use href="#star" transform="translate(492 162) scale(3.12)" opacity=".71"/>
+    <use href="#diamond" transform="translate(526 33) scale(1.26)" opacity=".45"/>
+    <use href="#star" transform="translate(557 123) scale(2.34)" opacity=".6"/>
+    <use href="#star" transform="translate(587 76) scale(3.38)" opacity=".76"/>
+    <use href="#star" transform="translate(29 213) scale(1.82)" opacity=".43"/>
+    <use href="#diamond" transform="translate(64 276) scale(1.80)" opacity=".61"/>
+    <circle cx="96" cy="224" r=".8" opacity=".49"/>
+    <use href="#star" transform="translate(128 338) scale(3.38)" opacity=".73"/>
+    <use href="#star" transform="translate(159 251) scale(1.82)" opacity=".46"/>
+    <use href="#diamond" transform="translate(191 306) scale(1.62)" opacity=".57"/>
+    <use href="#star" transform="translate(223 211) scale(2.86)" opacity=".68"/>
+    <use href="#star" transform="translate(254 365) scale(1.82)" opacity=".42"/>
+    <use href="#star" transform="translate(286 263) scale(3.12)" opacity=".72"/>
+    <use href="#diamond" transform="translate(317 324) scale(1.44)" opacity=".5"/>
+    <use href="#star" transform="translate(349 232) scale(2.60)" opacity=".63"/>
+    <circle cx="382" cy="354" r=".7" opacity=".45"/>
+    <use href="#star" transform="translate(414 281) scale(3.38)" opacity=".75"/>
+    <use href="#diamond" transform="translate(445 207) scale(1.44)" opacity=".53"/>
+    <use href="#star" transform="translate(477 329) scale(2.86)" opacity=".67"/>
+    <use href="#star" transform="translate(509 244) scale(1.82)" opacity=".44"/>
+    <use href="#cross" transform="translate(541 379) scale(2.52)" opacity=".71"/>
+    <use href="#diamond" transform="translate(573 293) scale(1.62)" opacity=".58"/>
+    <use href="#star" transform="translate(16 408) scale(3.12)" opacity=".7"/>
+    <use href="#star" transform="translate(48 473) scale(1.82)" opacity=".45"/>
+    <use href="#star" transform="translate(81 397) scale(2.34)" opacity=".6"/>
+    <use href="#diamond" transform="translate(113 456) scale(2.34)" opacity=".74"/>
+    <use href="#star" transform="translate(145 389) scale(1.82)" opacity=".43"/>
+    <use href="#cross" transform="translate(177 486) scale(2.10)" opacity=".64"/>
+    <use href="#star" transform="translate(209 421) scale(2.08)" opacity=".51"/>
+    <use href="#diamond" transform="translate(241 476) scale(2.16)" opacity=".72"/>
+    <circle cx="274" cy="403" r=".7" opacity=".46"/>
+    <use href="#star" transform="translate(306 462) scale(2.34)" opacity=".59"/>
+    <use href="#star" transform="translate(338 391) scale(3.38)" opacity=".76"/>
+    <circle cx="370" cy="485" r=".7" opacity=".42"/>
+    <use href="#cross" transform="translate(402 429) scale(2.10)" opacity=".62"/>
+    <use href="#star" transform="translate(434 474) scale(2.08)" opacity=".52"/>
+    <use href="#star" transform="translate(466 401) scale(3.12)" opacity=".7"/>
+    <use href="#diamond" transform="translate(498 488) scale(1.26)" opacity=".45"/>
+    <use href="#star" transform="translate(530 438) scale(2.34)" opacity=".58"/>
+    <use href="#star" transform="translate(562 467) scale(3.38)" opacity=".75"/>
+    <use href="#star" transform="translate(594 416) scale(1.82)" opacity=".44"/>
+  </g>
+  <g fill="#b3d5ff"><use href="#diamond" transform="translate(73 184) scale(2.70)" opacity=".72"/>
+    <use href="#star" transform="translate(359 48) scale(3.64)" opacity=".68"/>
+    <use href="#star" transform="translate(517 299) scale(3.90)" opacity=".7"/>
+    </g>
+  <g fill="#ffe2b7"><use href="#star" transform="translate(232 97) scale(3.38)" opacity=".69"/>
+    <use href="#diamond" transform="translate(427 371) scale(2.52)" opacity=".7"/>
+    </g>
+</svg>

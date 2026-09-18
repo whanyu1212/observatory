@@ -25,10 +25,11 @@ export function createLandmarkReactions(world: THREE.Group) {
     return { root, rest: root.position.clone() };
   });
   const anatomyCore = world.getObjectByName('anatomy-core') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
-  const rocket = world.getObjectByName('shipping-rocket')!;
-  const rocketRest = rocket.position.clone();
-  const rocketTilt = rocket.rotation.z;
-  const exhaust = world.getObjectByName('shipping-exhaust') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+  const shippingModel = world.getObjectByName('shipping-model')!;
+  const modelRestY = shippingModel.position.y;
+  const shippingLights = [0, 1, 2].map(index =>
+    world.getObjectByName(`shipping-status-${index}`) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>,
+  );
   const quarters = [0, 1, 2, 3].map(index => {
     const root = world.getObjectByName(`bonds-quarter-${index}`)!;
     return { root, rest: root.position.clone(), angle: Math.PI / 4 + index * Math.PI / 2 };
@@ -122,16 +123,15 @@ export function createLandmarkReactions(world: THREE.Group) {
         bot.light.material.emissiveIntensity = 1 + receiving * 3.5;
       });
 
-      // Ignite, lift, hover briefly, and settle back onto the same island.
-      const launchAge = sceneAge['shipping-ml'];
-      const lift = THREE.MathUtils.smoothstep(launchAge, 0.25, 0.95) * (1 - THREE.MathUtils.smoothstep(launchAge, 1.45, 2.6));
-      const burn = THREE.MathUtils.smoothstep(launchAge, 0, 0.2) * (1 - THREE.MathUtils.smoothstep(launchAge, 2.35, 2.75));
-      rocket.position.copy(rocketRest);
-      rocket.position.y += lift * 0.95;
-      rocket.rotation.z = rocketTilt * (1 - lift * 0.65);
-      exhaust.visible = motion && burn > 0.01;
-      exhaust.scale.set(0.7 + burn * 0.3, burn * (0.85 + Math.sin(time * 28) * 0.12), 0.7 + burn * 0.3);
-      exhaust.material.emissiveIntensity = 1.2 + burn * 2.2;
+      // A short deployment signal passes from the model through each server tray.
+      const deployAge = sceneAge['shipping-ml'];
+      const modelPulse = pulse(deployAge);
+      shippingModel.position.y = modelRestY + modelPulse * 0.12;
+      shippingModel.scale.setScalar(1 + modelPulse * 0.07);
+      shippingLights.forEach((light, index) => {
+        const signal = pulse(Math.max(0, deployAge - (2 - index) * 0.4));
+        light.material.emissiveIntensity = 0.35 + signal * 1.8;
+      });
 
       // A complete coin becomes four pieces, then assembles itself again.
       const bondAge = sceneAge['fractional-bonds'];

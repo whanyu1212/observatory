@@ -1,13 +1,16 @@
 import * as THREE from 'three';
+import { createCelestialScenery } from './celestialScenery';
 
 // Three depth ranges share the world camera, so orbiting creates real parallax.
-// No image textures or postprocessing passes are needed for this atmosphere.
-export function createUniverseAtmosphere(pixelRatio: number) {
+export function createUniverseAtmosphere(renderer: THREE.WebGLRenderer) {
   const group = new THREE.Group();
   group.name = 'universe-atmosphere';
+  const celestial = createCelestialScenery();
+  group.add(celestial.object);
   let seed = 4729;
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const time = { value: 0 };
+  const resolution = { value: renderer.getPixelRatio() };
 
   function particles(name: string, count: number, innerRadius: number, outerRadius: number, dust = false) {
     const positions: number[] = [], phases: number[] = [], sizes: number[] = [], colors: number[] = [];
@@ -29,11 +32,11 @@ export function createUniverseAtmosphere(pixelRatio: number) {
     geometry.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes, 1));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     const material = new THREE.ShaderMaterial({
-      uniforms: { uTime: time, uPixelRatio: { value: pixelRatio }, uDust: { value: dust ? 1 : 0 } },
+      uniforms: { uTime: time, uPixelRatio: resolution, uDust: { value: dust ? 1 : 0 } },
       vertexColors: true,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: dust ? THREE.AdditiveBlending : THREE.NormalBlending,
       toneMapped: false,
       vertexShader: `
         uniform float uTime;
@@ -43,26 +46,43 @@ export function createUniverseAtmosphere(pixelRatio: number) {
         attribute float aSize;
         varying vec3 vColor;
         varying float vLight;
+        varying float vShape;
         void main() {
           vec3 p = position;
           p.x += sin(uTime * .055 + aPhase) * .45 * uDust;
           p.y += cos(uTime * .04 + aPhase) * .3 * uDust;
           vec4 viewPosition = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * viewPosition;
-          gl_PointSize = clamp(aSize * 650.0 / max(4.0, -viewPosition.z), 1.1, 5.0) * uPixelRatio;
+          float shapeScale = mix(1.6, 1.0, uDust);
+          gl_PointSize = clamp(aSize * shapeScale * 650.0 / max(4.0, -viewPosition.z), 1.1, 6.0) * uPixelRatio;
           float blink = pow(.5 + .5 * sin(uTime * (.65 + aPhase * .16) + aPhase), 3.0);
           vLight = mix(.24 + .76 * blink, .12 + .2 * blink, uDust);
           vColor = color;
+          vShape = fract(aPhase * 1.618);
         }
       `,
       fragmentShader: `
+        uniform float uDust;
         varying vec3 vColor;
         varying float vLight;
+        varying float vShape;
         void main() {
-          float radius = length(gl_PointCoord - .5) * 2.0;
-          if (radius > 1.0) discard;
-          float glow = exp(-radius * radius * 5.0) * (1.0 - smoothstep(.65, 1.0, radius));
-          gl_FragColor = vec4(vColor, glow * vLight);
+          vec2 p = abs(gl_PointCoord - .5) * 2.0;
+          if (uDust > .5) {
+            float radius = length(p);
+            if (radius > 1.0) discard;
+            float softness = exp(-radius * radius * 5.0) * (1.0 - smoothstep(.65, 1.0, radius));
+            gl_FragColor = vec4(vColor, softness * vLight);
+          } else {
+            // Solid silhouettes with only a pixel of edge antialiasing, no halo.
+            float shape = vShape < .3 ? p.x + p.y
+              : vShape < .85 ? max(p.x, p.y) + 3.0 * min(p.x, p.y)
+              : min(max(p.x / .2, p.y), max(p.x, p.y / .2));
+            float edge = max(fwidth(shape), .001);
+            float alpha = 1.0 - smoothstep(1.0 - edge, 1.0, shape);
+            if (alpha <= 0.0) discard;
+            gl_FragColor = vec4(vColor, alpha * vLight);
+          }
         }
       `,
     });
@@ -77,67 +97,14 @@ export function createUniverseAtmosphere(pixelRatio: number) {
   particles('middle-stars', 340, 48, 76);
   const dust = particles('nearby-dust', 100, 17, 34, true);
 
-  const nebula = new THREE.Mesh(new THREE.SphereGeometry(100, 32, 20), new THREE.ShaderMaterial({
-    uniforms: { uTime: time },
-    side: THREE.BackSide,
-    transparent: true,
-    depthWrite: false,
-    // Transparent objects render after opaque geometry; test far-plane depth so
-    // the nebula never washes over the islands or their sculptures.
-    depthTest: true,
-    toneMapped: false,
-    vertexShader: `
-      varying vec3 vDirection;
-      varying vec4 vClip;
-      void main() {
-        vDirection = normalize(position);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        gl_Position.z = gl_Position.w * .9999;
-        vClip = gl_Position;
-      }
-    `,
-    fragmentShader: `
-      uniform float uTime;
-      varying vec3 vDirection;
-      varying vec4 vClip;
-      float hash(vec3 p) {
-        p = fract(p * .1031);
-        p += dot(p, p.yzx + 33.33);
-        return fract((p.x + p.y) * p.z);
-      }
-      float noise(vec3 p) {
-        vec3 cell = floor(p);
-        vec3 f = fract(p);
-        f = f * f * (3.0 - 2.0 * f);
-        return mix(
-          mix(mix(hash(cell), hash(cell + vec3(1,0,0)), f.x), mix(hash(cell + vec3(0,1,0)), hash(cell + vec3(1,1,0)), f.x), f.y),
-          mix(mix(hash(cell + vec3(0,0,1)), hash(cell + vec3(1,0,1)), f.x), mix(hash(cell + vec3(0,1,1)), hash(cell + vec3(1,1,1)), f.x), f.y), f.z);
-      }
-      void main() {
-        vec3 direction = normalize(vDirection);
-        vec3 p = direction * 4.0 + vec3(uTime * .002, 0.0, 0.0);
-        float clouds = noise(p) * .57 + noise(p * 2.07 + 13.0) * .28 + noise(p * 4.1 + 27.0) * .15;
-        float ribbon = exp(-abs(dot(direction, normalize(vec3(.55, .18, -.8))) + .06) * 5.0);
-        float wisps = smoothstep(.32, .72, clouds) * ribbon;
-        float lanes = smoothstep(.2, .58, noise(p * 1.6 + 6.0));
-        vec3 color = mix(vec3(.19, .35, .39), vec3(.38, .26, .57), smoothstep(.3, .72, clouds));
-        vec2 screen = abs(vClip.xy / vClip.w);
-        float edge = 1.0 - smoothstep(.76, 1.0, max(screen.x, screen.y));
-        gl_FragColor = vec4(color, wisps * lanes * .28 * edge);
-      }
-    `,
-  }));
-  nebula.name = 'nebula-clouds';
-  nebula.renderOrder = -20;
-  nebula.frustumCulled = false;
-  group.add(nebula);
-
   return {
     object: group,
+    setPixelRatio(value: number) { resolution.value = value; },
+    dispose() { celestial.dispose(); },
     update(dt: number, motionEnabled: boolean, camera: THREE.Camera) {
+      celestial.update(dt, motionEnabled);
       if (motionEnabled) time.value += dt;
-      // Camera translation never moves the sky, but does move nearby dust in view.
-      nebula.position.copy(camera.position);
+      // Camera translation never moves distant stars, but does move nearby dust in view.
       farStars.position.copy(camera.position);
       if (motionEnabled) dust.rotation.y += dt * .002;
     },

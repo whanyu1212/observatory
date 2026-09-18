@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Compass, Flag, Move, Pause, Play, X } from 'lucide-react';
+import { ArrowUpRight, Check, Compass, Flag, MousePointer2, Move, Pause, Play, X } from 'lucide-react';
 import { projects, type ProjectId } from './curiosity';
 import '@/styles/playground.css';
 
@@ -26,8 +26,12 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
   const menuButton = useRef<HTMLButtonElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const previousPanel = useRef(panelProject);
-  const returnToWorld = () => {
+  const leaveProject = () => {
     setArrived(null);
+    setDestination(null);
+  };
+  const returnToWorld = () => {
+    leaveProject();
     sectionRef.current?.querySelector<HTMLCanvasElement>('canvas')?.focus({ preventScroll: true });
   };
   useEffect(() => {
@@ -66,14 +70,23 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
       <p>I'm Hanyu. An AI builder, data scientist,<br className="playground-desktop-break" /> and open-source contributor.</p>
     </div>
 
+    <aside className="playground-controls" aria-label="How to explore the universe">
+      <strong><MousePointer2 size={16} aria-hidden="true" /><span className="playground-orbit-hint">Click an island to explore</span><span className="playground-touch-hint">Tap an island to explore</span></strong>
+      <div className="playground-control-shortcuts playground-orbit-hint">
+        <span><Move size={14} aria-hidden="true" /> Drag to orbit</span>
+        <span><kbd>W A S D</kbd> to fly</span>
+      </div>
+      <p className="playground-orbit-hint"><kbd>Ctrl</kbd> + scroll to zoom <span aria-hidden="true">·</span> Scroll to read</p>
+      <p className="playground-touch-hint">Pinch to zoom <span aria-hidden="true">·</span> Swipe to scroll</p>
+    </aside>
+
     <div className="playground-world">
       <Suspense fallback={<div className="playground-loading" role="status">Assembling a little universe…</div>}>
-        <ExplorationScene destination={destination} selectedProject={arrived} detailProject={panelProject} navigationRequest={navigationRequest} motionEnabled={motionEnabled} onArrive={arrive} onReady={() => setReady(true)} />
+        <ExplorationScene destination={destination} selectedProject={arrived} detailProject={panelProject} navigationRequest={navigationRequest} motionEnabled={motionEnabled} onArrive={arrive} onDepart={leaveProject} onReady={() => setReady(true)} />
       </Suspense>
     </div>
 
     <div className="playground-bottom">
-      <div className="playground-controls"><Move size={22} aria-hidden="true" /><div><strong><span className="playground-orbit-hint">Drag to orbit</span><span className="playground-touch-hint">Swipe to scroll</span></strong><span className="playground-orbit-hint">Scroll the page · Ctrl + scroll to zoom</span><span className="playground-touch-hint">Pinch to zoom · Tap a project to visit</span></div><span className="playground-key-hint"><kbd>W A S D</kbd> to pilot</span></div>
       <div className="playground-actions">
         <button ref={menuButton} aria-expanded={menuOpen} aria-controls="world-project-menu" onClick={() => setMenuOpen(value => !value)}><Compass size={14} /> Featured projects <span className="obs-mono">{String(projectIds.length).padStart(2, '0')}</span></button>
         <button onClick={onToggleMotion} aria-label={motionEnabled ? 'Pause motion' : 'Enable motion'} aria-pressed={motionEnabled}>{motionEnabled ? <Pause size={14} /> : <Play size={14} />}<span className="playground-motion-label">{motionEnabled ? 'Pause motion' : 'Enable motion'}</span></button>

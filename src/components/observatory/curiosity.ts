@@ -12,7 +12,7 @@ export const projects: Record<ProjectId, {
   name: string; mapName?: string; trail: TrailId; title: [string, string]; question: string;
   description: string;
   stack: string[]; repository: string; docs?: string;
-  gallery: { src: string; alt: string; label: string; caption?: string }[];
+  gallery: { src: string; width: number; height: number; alt: string; label: string; caption?: string }[];
 }> = {
   'gem-dota': {
     name: 'Gem Dota', trail: 'replays', title: ['Replay.', 'Revealed.'],
@@ -21,9 +21,9 @@ export const projects: Record<ProjectId, {
     stack: ['Python', 'Protocol Buffers', 'pandas', 'Plotly'],
     repository: 'https://github.com/whanyu1212/gem-dota', docs: 'https://whanyu1212.github.io/gem-dota/',
     gallery: [
-      { src: '/projects/gem-dota/banner.webp', alt: 'Gem Dota wordmark over a Dota map illustration', label: 'Repository overview' },
-      { src: '/projects/gem-dota/movement-trail.webp', alt: 'Interactive Dota map showing a player movement trail', label: 'Movement analysis', caption: 'An interactive path reconstructed from parsed replay positions.' },
-      { src: '/projects/gem-dota/cli.png', alt: 'Gem Dota command-line interface parsing a replay', label: 'Command line' },
+      { src: '/projects/gem-dota/banner.webp', width: 1600, height: 800, alt: 'Gem Dota wordmark over a Dota map illustration', label: 'Repository overview' },
+      { src: '/projects/gem-dota/movement-trail.webp', width: 1600, height: 1139, alt: 'Interactive Dota map showing a player movement trail', label: 'Movement analysis', caption: 'An interactive path reconstructed from parsed replay positions.' },
+      { src: '/projects/gem-dota/cli.png', width: 2194, height: 762, alt: 'Gem Dota command-line interface parsing a replay', label: 'Command line' },
     ],
   },
   wisp: {
@@ -32,7 +32,7 @@ export const projects: Record<ProjectId, {
     description: 'An event-driven coding-agent runtime with resumable sessions, explicit approval controls, and inspectable transcripts shared across terminal, RPC, and SDK interfaces.',
     stack: ['Coding agents', 'Session state', 'Tool use', 'RPC / SDK'],
     repository: 'https://github.com/whanyu1212/Wisp',
-    gallery: [{ src: '/projects/wisp/banner.webp', alt: 'Wisp coding agent connected to a terminal session', label: 'Repository overview' }],
+    gallery: [{ src: '/projects/wisp/banner.webp', width: 1600, height: 400, alt: 'Wisp coding agent connected to a terminal session', label: 'Repository overview' }],
   },
   krill: {
     name: 'Krill.jl', trail: 'agents', title: ['Beyond', 'the chat.'],
@@ -40,7 +40,7 @@ export const projects: Record<ProjectId, {
     description: 'A Julia-native agent runtime for Telegram and Discord, combining persistent memory, scheduled tasks, MCP tools, and coding-agent delegation for longer-running work.',
     stack: ['Julia', 'MCP', 'Persistent memory', 'Delegation'],
     repository: 'https://github.com/whanyu1212/Krill.jl',
-    gallery: [{ src: '/projects/repositories/krill.png', alt: 'Krill.jl GitHub repository preview', label: 'GitHub repository' }],
+    gallery: [{ src: '/projects/repositories/krill.png', width: 1200, height: 600, alt: 'Krill.jl GitHub repository preview', label: 'GitHub repository' }],
   },
   opencouch: {
     name: 'OpenCouch', trail: 'agents', title: ['Room to', 'reflect.'],
@@ -48,7 +48,7 @@ export const projects: Record<ProjectId, {
     description: 'A pre-beta companion for guided self-reflection, pairing layered memory and structured wellness exercises with safety-aware routing across web and terminal interfaces.',
     stack: ['Python', 'Agents SDK', 'FastAPI', 'Postgres', 'Next.js'],
     repository: 'https://github.com/whanyu1212/OpenCouch',
-    gallery: [{ src: '/projects/repositories/opencouch.png', alt: 'OpenCouch GitHub repository preview', label: 'GitHub repository' }],
+    gallery: [{ src: '/projects/repositories/opencouch.png', width: 1200, height: 600, alt: 'OpenCouch GitHub repository preview', label: 'GitHub repository' }],
   },
   nimble: {
     name: 'NimbleAgents.jl', trail: 'agents', title: ['Less setup.', 'More ideas.'],
@@ -57,7 +57,7 @@ export const projects: Record<ProjectId, {
     stack: ['Julia', 'Tool calling', 'Multi-agent workflows', 'MCP'],
     repository: 'https://github.com/whanyu1212/NimbleAgents.jl',
     docs: 'https://whanyu1212.github.io/NimbleAgents.jl/dev/',
-    gallery: [{ src: '/projects/repositories/nimble.png', alt: 'NimbleAgents.jl GitHub repository preview', label: 'GitHub repository' }],
+    gallery: [{ src: '/projects/repositories/nimble.png', width: 1200, height: 600, alt: 'NimbleAgents.jl GitHub repository preview', label: 'GitHub repository' }],
   },
   quantrl: {
     name: 'QuantRL-Lab', trail: 'learning', title: ['Act. Learn.', 'Try again.'],
@@ -65,7 +65,7 @@ export const projects: Record<ProjectId, {
     description: 'A modular Python testbed for reinforcement learning in quantitative trading, built to compare pluggable action, observation, and reward strategies.',
     stack: ['Python', 'Reinforcement learning', 'Experiments'],
     repository: 'https://github.com/whanyu1212/QuantRL-Lab',
-    gallery: [{ src: '/projects/repositories/quantrl.png', alt: 'QuantRL-Lab GitHub repository preview', label: 'GitHub repository' }],
+    gallery: [{ src: '/projects/repositories/quantrl.png', width: 1200, height: 600, alt: 'QuantRL-Lab GitHub repository preview', label: 'GitHub repository' }],
   },
   'fractional-bonds': {
     name: 'Fractional Bond Trading', mapName: 'Fractional bonds', trail: 'systems', title: ['Bonds.', 'In pieces.'],
@@ -73,7 +73,7 @@ export const projects: Record<ProjectId, {
     description: 'An Ethereum proof of concept for fractional bond ownership, covering tokenized issuance, peer-to-peer exchange, coupon payments, pricing oracles, and redemption.',
     stack: ['Solidity', 'Hardhat', 'Next.js', 'Ethers.js', 'Chainlink'],
     repository: 'https://github.com/whanyu1212/fractional-bond-trading',
-    gallery: [{ src: '/projects/repositories/fractional-bonds.png', alt: 'Fractional Bond Trading GitHub repository preview', label: 'GitHub repository' }],
+    gallery: [{ src: '/projects/repositories/fractional-bonds.png', width: 1200, height: 600, alt: 'Fractional Bond Trading GitHub repository preview', label: 'GitHub repository' }],
   },
   'shipping-ml': {
     name: 'Shipping ML', trail: 'systems', title: ['Train it.', 'Ship it.'],
@@ -81,7 +81,7 @@ export const projects: Record<ProjectId, {
     description: 'An end-to-end MLOps reference that takes a toy rental model through validation, experiment tracking, serving, automated retraining, and evidence-based promotion.',
     stack: ['Python', 'FastAPI', 'XGBoost', 'MLflow', 'Docker'],
     repository: 'https://github.com/whanyu1212/shipping-ml',
-    gallery: [{ src: '/projects/repositories/shipping-ml.png', alt: 'Shipping ML GitHub repository preview', label: 'GitHub repository' }],
+    gallery: [{ src: '/projects/repositories/shipping-ml.png', width: 1200, height: 600, alt: 'Shipping ML GitHub repository preview', label: 'GitHub repository' }],
   },
   'mental-gym': {
     name: 'Mental Gym', trail: 'learning', title: ['Stay sharp.', 'Keep going.'],
@@ -89,7 +89,7 @@ export const projects: Record<ProjectId, {
     description: 'A hands-on algorithm practice platform combining first-principles solutions, interactive visualizations, and spaced repetition to turn problem-solving notes into lasting understanding.',
     stack: ['Python', 'Julia', 'C++', 'Data structures + algorithms'],
     repository: 'https://github.com/whanyu1212/mental-gym',
-    gallery: [{ src: '/projects/repositories/mental-gym.png', alt: 'Mental Gym GitHub repository preview', label: 'GitHub repository' }],
+    gallery: [{ src: '/projects/repositories/mental-gym.png', width: 1200, height: 600, alt: 'Mental Gym GitHub repository preview', label: 'GitHub repository' }],
   },
   'claude-code-anatomy': {
     name: 'Claude Code Anatomy', mapName: 'Claude Anatomy', trail: 'agents', title: ['Under', 'the hood.'],
@@ -98,6 +98,6 @@ export const projects: Record<ProjectId, {
     stack: ['Agent architecture', 'TypeScript', 'Docusaurus', 'Technical writing'],
     repository: 'https://github.com/whanyu1212/claude-code-anatomy',
     docs: 'https://claude-code-anatomy-sigma.vercel.app/',
-    gallery: [{ src: '/projects/repositories/claude-code-anatomy.png', alt: 'Claude Code Anatomy GitHub repository preview', label: 'GitHub repository' }],
+    gallery: [{ src: '/projects/repositories/claude-code-anatomy.png', width: 1200, height: 600, alt: 'Claude Code Anatomy GitHub repository preview', label: 'GitHub repository' }],
   },
 };

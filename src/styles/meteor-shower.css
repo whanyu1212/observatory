@@ -43,10 +43,10 @@
 @keyframes obs-meteor-flight {
   0% { opacity: 0; transform: translate3d(90px, -58px, 0); }
   2% { opacity: .75; }
-  11% { opacity: .55; }
-  16%, 100% { opacity: 0; transform: translate3d(-600px, 390px, 0); }
+  13% { opacity: .55; }
+  21%, 100% { opacity: 0; transform: translate3d(-600px, 390px, 0); }
 }
 @media (max-width: 700px) {
   .obs-meteor i { width: calc(var(--meteor-length) * .65); height: 1px; }
-  .obs-meteor:nth-child(n + 4) { display: none; }
+  .obs-meteor:nth-child(n + 7) { display: none; }
 }

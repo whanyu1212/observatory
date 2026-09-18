@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <defs>
+    <path id="star" d="M0-1 .2-.2 1 0 .2.2 0 1-.2.2-1 0-.2-.2Z"/>
+    <path id="diamond" d="M0-1 .65 0 0 1-.65 0Z"/>
+    <path id="cross" d="M-.13-1H.13V-.13H1V.13H.13V1H-.13V.13H-1V-.13H-.13Z"/>
+  </defs>
+  <g fill="#edf2e8">
+    <use href="#diamond" transform="translate(37 52) scale(1.80)" opacity=".54"/>
+    <use href="#star" transform="translate(141 217) scale(3.38)" opacity=".72"/>
+    <use href="#star" transform="translate(238 84) scale(2.08)" opacity=".42"/>
+    <use href="#star" transform="translate(326 378) scale(2.60)" opacity=".58"/>
+    <use href="#diamond" transform="translate(448 148) scale(2.88)" opacity=".76"/>
+    <use href="#star" transform="translate(531 487) scale(2.08)" opacity=".4"/>
+    <use href="#star" transform="translate(653 262) scale(2.86)" opacity=".61"/>
+    <use href="#cross" transform="translate(774 64) scale(1.89)" opacity=".47"/>
+    <use href="#diamond" transform="translate(879 414) scale(2.52)" opacity=".68"/>
+    <circle cx="1017" cy="192" r=".8" opacity=".45"/>
+    <use href="#star" transform="translate(1142 528) scale(2.86)" opacity=".57"/>
+    <use href="#star" transform="translate(81 683) scale(3.90)" opacity=".7"/>
+    <use href="#diamond" transform="translate(213 981) scale(1.62)" opacity=".48"/>
+    <use href="#star" transform="translate(349 762) scale(2.86)" opacity=".6"/>
+    <use href="#cross" transform="translate(469 1104) scale(1.68)" opacity=".39"/>
+    <use href="#star" transform="translate(591 871) scale(3.64)" opacity=".71"/>
+    <use href="#diamond" transform="translate(716 692) scale(1.62)" opacity=".5"/>
+    <use href="#star" transform="translate(824 1033) scale(3.12)" opacity=".63"/>
+    <circle cx="947" cy="794" r=".8" opacity=".42"/>
+    <use href="#star" transform="translate(1081 1141) scale(3.90)" opacity=".73"/>
+    <use href="#diamond" transform="translate(1170 908) scale(1.80)" opacity=".56"/>
+    <circle cx="543" cy="34" r=".7" opacity=".38"/>
+    <use href="#star" transform="translate(28 1090) scale(2.08)" opacity=".43"/>
+    <use href="#star" transform="translate(1123 39) scale(3.12)" opacity=".64"/>
+  </g>
+  <g fill="#d9f991">
+    <use href="#diamond" transform="translate(394 591) scale(1.80)" opacity=".62"/>
+    <use href="#star" transform="translate(982 638) scale(2.86)" opacity=".66"/>
+  </g>
+</svg>
