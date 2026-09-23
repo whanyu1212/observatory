@@ -11,6 +11,8 @@ export function createUniverseAtmosphere(renderer: THREE.WebGLRenderer) {
   const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const time = { value: 0 };
   const resolution = { value: renderer.getPixelRatio() };
+  // Spectrum themes retint every star layer through one shared uniform.
+  const tint = { value: new THREE.Color(1, 1, 1) };
 
   function particles(name: string, count: number, innerRadius: number, outerRadius: number, dust = false) {
     const positions: number[] = [], phases: number[] = [], sizes: number[] = [], colors: number[] = [];
@@ -32,7 +34,7 @@ export function createUniverseAtmosphere(renderer: THREE.WebGLRenderer) {
     geometry.setAttribute('aSize', new THREE.Float32BufferAttribute(sizes, 1));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     const material = new THREE.ShaderMaterial({
-      uniforms: { uTime: time, uPixelRatio: resolution, uDust: { value: dust ? 1 : 0 } },
+      uniforms: { uTime: time, uPixelRatio: resolution, uTint: tint, uDust: { value: dust ? 1 : 0 } },
       vertexColors: true,
       transparent: true,
       depthWrite: false,
@@ -42,6 +44,7 @@ export function createUniverseAtmosphere(renderer: THREE.WebGLRenderer) {
         uniform float uTime;
         uniform float uPixelRatio;
         uniform float uDust;
+        uniform vec3 uTint;
         attribute float aPhase;
         attribute float aSize;
         varying vec3 vColor;
@@ -57,7 +60,7 @@ export function createUniverseAtmosphere(renderer: THREE.WebGLRenderer) {
           gl_PointSize = clamp(aSize * shapeScale * 650.0 / max(4.0, -viewPosition.z), 1.1, 6.0) * uPixelRatio;
           float blink = pow(.5 + .5 * sin(uTime * (.65 + aPhase * .16) + aPhase), 3.0);
           vLight = mix(.24 + .76 * blink, .12 + .2 * blink, uDust);
-          vColor = color;
+          vColor = color * uTint;
           vShape = fract(aPhase * 1.618);
         }
       `,
@@ -99,6 +102,8 @@ export function createUniverseAtmosphere(renderer: THREE.WebGLRenderer) {
 
   return {
     object: group,
+    starTint: tint.value,
+    sunTint: celestial.sunTint,
     setPixelRatio(value: number) { resolution.value = value; },
     dispose() { celestial.dispose(); },
     update(dt: number, motionEnabled: boolean, camera: THREE.Camera) {

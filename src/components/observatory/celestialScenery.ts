@@ -31,6 +31,7 @@ export function createCelestialScenery() {
   sun.name = 'distant-sun';
   sun.position.copy(SUN_POSITION);
   sun.scale.set(9, 9, 1);
+  const sunMaterial = sun.material;
   object.add(sun);
 
   const planetSystem = new THREE.Group();
@@ -117,6 +118,7 @@ export function createCelestialScenery() {
 
   return {
     object,
+    sunTint: sunMaterial.color,
     update(dt: number, motionEnabled: boolean) {
       if (motionEnabled) belt.rotation.y += dt * 0.003;
     },

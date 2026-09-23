@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useStore } from '@nanostores/react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -9,6 +10,9 @@ import { createTravelTrail } from './travelTrail';
 import { createLandmarkReactions } from './landmarkReactions';
 import { createUniverseAtmosphere } from './universeAtmosphere';
 import { SUN_POSITION } from './celestialScenery';
+import { createSceneTheme } from './sceneTheme';
+import { createGlowSprites, type GlowSource } from './glowSprites';
+import { $theme, type SpectrumTheme } from '@/stores/osStore';
 
 export type ExplorationSceneProps = {
   destination: ProjectId | null;
@@ -22,7 +26,9 @@ export type ExplorationSceneProps = {
 };
 
 const ids = Object.keys(projects) as ProjectId[];
-const labelHeights: Record<ProjectId, number> = { 'gem-dota': 3.95, wisp: 3.35, krill: 3.75, opencouch: 2.45, nimble: 2.9, quantrl: 3.55, 'fractional-bonds': 3.55, 'shipping-ml': 3.45, 'mental-gym': 3.2, 'claude-code-anatomy': 3.45 };
+// The explorer parks about two units beside a landmark, so arrival is judged a little wider.
+const ARRIVAL_RADIUS = 2.3;
+const DEPARTURE_RADIUS = 2.7;
 
 const rootStyle = {
   position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden',
@@ -42,7 +48,7 @@ const labelStyle = {
 
 const markerStyle = {
   width: '16px', height: '16px', display: 'grid', placeItems: 'center', borderRadius: '50%',
-  color: '#091214', background: '#d9f991', fontSize: '8px', boxShadow: '0 0 14px rgba(217,249,145,.55)',
+  color: '#091214', background: 'var(--obs-accent)', fontSize: '8px', boxShadow: '0 0 14px color-mix(in srgb, var(--obs-accent), transparent 45%)',
 } as const;
 
 const shortNames: Record<ProjectId, string> = {
@@ -92,6 +98,7 @@ function ProjectButton({ id, index, buttonRef, onChoose, onLook }: {
     >
       <span aria-hidden="true" style={markerStyle}>{String(index + 1).padStart(2, '0')}</span>
       <span className="world-project-name">{project.mapName ?? project.name}</span>
+      <span className="world-project-tagline" aria-hidden="true">{project.tagline}</span>
     </button>
   );
 }
@@ -110,6 +117,9 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
   const wakeRef = useRef<(force?: boolean, labels?: boolean) => void>(() => undefined);
   const detailProjectRef = useRef(detailProject);
   detailProjectRef.current = detailProject;
+  const theme = useStore($theme);
+  const themeRef = useRef(theme);
+  const applyThemeRef = useRef<(theme: SpectrumTheme) => void>(() => undefined);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => { onArriveRef.current = onArrive; }, [onArrive]);
@@ -117,6 +127,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
   useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
   useEffect(() => { motionRef.current = motionEnabled; wakeRef.current(true); }, [motionEnabled]);
   useEffect(() => { wakeRef.current(true); }, [detailProject]);
+  useEffect(() => { themeRef.current = theme; applyThemeRef.current(theme); }, [theme]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -267,6 +278,56 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     const atmosphere = createUniverseAtmosphere(renderer);
     scene.add(atmosphere.object);
 
+    // The accent colour is shared by reference: the theme blend writes into it
+    // and the beacon, underglow and halos read it in place.
+    const accent = new THREE.Color(0xd9f991);
+    const beacon = world.explorer.getObjectByName('explorer-beacon') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | undefined;
+    const glowSources: GlowSource[] = [];
+    const addGlow = (name: string, color: number | THREE.Color, size: number, intensity: GlowSource['intensity'], offset?: THREE.Vector3) => {
+      const object = world.group.getObjectByName(name);
+      if (object) glowSources.push({ object, color: color instanceof THREE.Color ? color : new THREE.Color(color), size, intensity, offset });
+    };
+    addGlow('gem-inner-light', 0x8effd0, 1.7, .55);
+    addGlow('gem-dota-hero', 0xb5ffe4, 0.9, .9);
+    addGlow('gem-dota-radiant', 0x7be07b, 0.9, .45);
+    addGlow('gem-dota-dire', 0xff6a5c, 0.9, .45);
+    addGlow('opencouch-lamp', 0xffc98a, 1.9, .7);
+    addGlow('wisp-core', 0x7ff7ea, 3.4, .4);
+    [0xa78bea, 0x8ac86d, 0xe78187].forEach((color, index) => addGlow(`nimble-antenna-${index}`, color, 1, .9));
+    addGlow('nimble-handoff', 0xd9f991, 1.7, 1);
+    addGlow('anatomy-core', 0x6fe0cf, 1.6, .6);
+    [0, 1, 2].forEach(index => {
+      // Gate lights flare as the model passes, so their halos follow the material.
+      const light = world.group.getObjectByName(`shipping-status-${index}`) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | undefined;
+      if (light) glowSources.push({ object: light, color: new THREE.Color(0x8ff0c4), size: 1, intensity: () => light.material.emissiveIntensity * .32 });
+    });
+    addGlow('explorer-beacon', accent, 1.2, .9);
+    glowSources.push({ object: world.explorer, color: accent, size: 2, intensity: () => world.hoverLight.intensity * .16, offset: new THREE.Vector3(0, -0.7, 0) });
+    world.explorer.getObjectByName('explorer-exhaust-flames')?.children.forEach(jet => {
+      // Engine halos swell with the flame length, so idle ships only simmer.
+      glowSources.push({ object: jet, color: new THREE.Color(0xff9a45), size: 1.7, intensity: () => THREE.MathUtils.clamp((jet.scale.x - .4) * 1.3, .12, 1), offset: new THREE.Vector3(-0.35, 0, 0) });
+    });
+    const glows = createGlowSprites(renderer, glowSources);
+    scene.add(glows.object);
+
+    const sceneTheme = createSceneTheme({
+      fog: [(scene.fog as THREE.FogExp2).color],
+      sky: [hemisphere.color],
+      ground: [hemisphere.groundColor],
+      key: [sun.color],
+      rim: [rim.color],
+      rock: [...new Set(world.ground.flatMap(object => object instanceof THREE.Mesh ? [(object.material as THREE.MeshStandardMaterial).color] : []))],
+      sun: [atmosphere.sunTint],
+      stars: [atmosphere.starTint],
+      accent: [accent, world.hoverLight.color, ...(beacon ? [beacon.material.color, beacon.material.emissive] : [])],
+    });
+    sceneTheme.set(themeRef.current, false);
+    applyThemeRef.current = next => {
+      sceneTheme.set(next, motionRef.current);
+      forceDraw = true;
+      wake();
+    };
+
     const current = new THREE.Vector3(0, 0, 0.4);
     const target = current.clone();
     const projected = new THREE.Vector3();
@@ -310,16 +371,20 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     const setWaypoint = (id: ProjectId) => {
       targetProject = id;
       target.copy(WORLD_POINTS[id]);
-      const approach = new THREE.Vector3(-target.x, 0, -target.z);
-      if (approach.lengthSq() < 0.1) approach.set(0, 0, 1);
-      target.add(approach.normalize().multiplyScalar(1.42));
+      // Park beside the landmark, never between it and the camera: step to the
+      // camera's left (the discovery card covers the right) and slightly past it.
+      cameraForward.copy(controls.target).sub(camera.position).setY(0);
+      if (cameraForward.lengthSq() < 0.001) cameraForward.set(0, 0, -1);
+      cameraForward.normalize();
+      cameraRight.crossVectors(cameraForward, camera.up).normalize();
+      target.addScaledVector(cameraRight, -2.05).addScaledVector(cameraForward, 0.3);
       renderer.domElement.focus({ preventScroll: true });
       if (!motionRef.current) {
         current.copy(target);
         world.explorer.position.set(current.x, current.y + 1.58, current.z);
       }
       const destinationPoint = WORLD_POINTS[id];
-      if (current.distanceTo(destinationPoint) < 1.72) {
+      if (current.distanceTo(destinationPoint) < ARRIVAL_RADIUS) {
         arrivedAt = id;
         onArriveRef.current(id);
       }
@@ -362,7 +427,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         button.dataset.anchorY = (-projected.y * .5 + .5).toFixed(4);
         button.dataset.anchorVisible = String(projected.z > -1 && projected.z < 1 && Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1);
         projected.copy(WORLD_POINTS[id]);
-        projected.y += 0.9 + labelHeights[id] + landmarks[index].lift;
+        projected.y += world.labelOffsets[id] + landmarks[index].lift;
         projected.project(camera);
         const onScreen = projected.z > -1 && projected.z < 1 && Math.abs(projected.x) < 1.08 && Math.abs(projected.y) < 1.08;
         return {
@@ -475,6 +540,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       camera.aspect = width / height;
       camera.fov = compact ? 54 : width / height < 1.15 ? 47 : 41;
       camera.updateProjectionMatrix();
+      glows.setViewport(height * pixelRatio, camera.fov);
       const previousHomeDistance = homeDistance;
       const distanceRatio = previousHomeDistance > 0 ? controls.getDistance() / previousHomeDistance : 1;
       const nextHomeTarget = compact ? new THREE.Vector3(3.0, 0.4, 2.6) : new THREE.Vector3(0.5, 0.8, 0.5);
@@ -609,14 +675,16 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       });
       // Passing an island during manual flight must not start another close-up.
       const arrivalAllowed = keys.size === 0 && (!targetProject || nearest === targetProject);
-      if (nearest && arrivalAllowed && nearestDistance < 1.72 && arrivedAt !== nearest) {
+      if (nearest && arrivalAllowed && nearestDistance < ARRIVAL_RADIUS && arrivedAt !== nearest) {
         arrivedAt = nearest;
         onArriveRef.current(nearest);
-      } else if (nearestDistance > 2.1) {
+      } else if (nearestDistance > DEPARTURE_RADIUS) {
         arrivedAt = null;
       }
 
       atmosphere.update(dt, animate, camera);
+      const themeBlending = sceneTheme.update(dt);
+      glows.update(dt, animate);
       const cameraStamp = [camera.position.x, camera.position.y, camera.position.z, controls.target.x, controls.target.y, controls.target.z].join(',');
       if (cameraStamp !== lastCameraStamp) {
         lastCameraStamp = cameraStamp;
@@ -672,7 +740,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       }
       forceDraw = false;
       rendering = false;
-      if (animate || interactive || hoverPending || now - idleSince < 500) scheduleFrame();
+      if (animate || interactive || hoverPending || themeBlending || now - idleSince < 500) scheduleFrame();
     };
 
     const redraw = () => {
@@ -889,6 +957,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       cameraActionsRef.current = emptyCameraActions;
       focusRef.current = () => undefined;
       wakeRef.current = () => undefined;
+      applyThemeRef.current = () => undefined;
       controls.removeEventListener('start', interruptJourney);
       controls.removeEventListener('change', continueInteraction);
       controls.removeEventListener('end', finishInteraction);
@@ -983,10 +1052,31 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           cursor: pointer;
         }
         .world-camera-toolbar button:hover { background: rgba(217,249,145,.1); }
-        .world-camera-toolbar button:focus-visible { outline: 1px solid #d9f991; outline-offset: 2px; }
+        .world-camera-toolbar button:focus-visible { outline: 1px solid var(--obs-accent); outline-offset: 2px; }
         .world-project-label:hover,
         .world-project-label:focus-visible {
           background: rgba(20,31,32,.96) !important;
+        }
+        /* Absolutely placed so the pill keeps its measured size for label layout. */
+        .world-project-tagline {
+          position: absolute;
+          top: calc(100% + 5px);
+          left: 50%;
+          padding: 4px 8px;
+          border-radius: 6px;
+          color: rgba(237,242,232,.82);
+          background: rgba(7,14,16,.9);
+          font: 500 11px/1.2 "Space Grotesk", sans-serif;
+          letter-spacing: 0;
+          opacity: 0;
+          transform: translate(-50%, -3px);
+          transition: opacity 160ms ease, transform 160ms ease;
+          pointer-events: none;
+        }
+        .world-project-label:hover .world-project-tagline,
+        .world-project-label:focus-visible .world-project-tagline {
+          opacity: 1;
+          transform: translate(-50%, 0);
         }
         .world-destination-legend { display: none; }
         @media (max-width: 700px) {
@@ -1005,7 +1095,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
             padding: 4px !important;
             background: rgba(7,14,16,.72) !important;
           }
-          .world-project-label .world-project-name { display: none; }
+          .world-project-label .world-project-name,
+          .world-project-label .world-project-tagline { display: none; }
           .world-project-label > span:first-child {
             width: 17px !important;
             height: 17px !important;

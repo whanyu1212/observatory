@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { roundedPanel } from './refinedLandmarks';
 
 const PALETTE = {
   cream: 0xedf2e8,
@@ -136,11 +138,110 @@ function facetedGemGeometry() {
   return geometry;
 }
 
+/**
+ * A Dota minimap: Radiant bottom-left, Dire top-right, the river on the
+ * anti-diagonal and three lanes. Map units run from -1 to 1 on each axis.
+ */
+function makeMinimap() {
+  const map = new THREE.Group();
+  map.name = 'gem-dota-minimap';
+  const half = 1.02;
+  const top = 0.25;
+  const at = (u: number, v: number, y = top) => new THREE.Vector3(u * half, y, -v * half);
+
+  const slab = solid(roundedPanel(2.24, 2.24, 0.1, 0.14), standard(0x1a211f, 0.85, 0.05));
+  slab.rotation.x = -Math.PI / 2;
+  slab.position.y = 0.13;
+  map.add(slab);
+
+  const territory = (points: Array<[number, number]>, color: number) => {
+    const shape = new THREE.Shape(points.map(([u, v]) => new THREE.Vector2(u * half, v * half)));
+    const mesh = decoration(new THREE.Mesh(new THREE.ShapeGeometry(shape), standard(color, 0.9, 0.02)));
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = top;
+    mesh.receiveShadow = true;
+    map.add(mesh);
+  };
+  territory([[-1, -1], [1, -1], [-1, 1]], 0x2f5236);
+  territory([[1, 1], [-1, 1], [1, -1]], 0x55303a);
+
+  // The river meanders from top-left to bottom-right between the two sides.
+  const riverPoints = Array.from({ length: 7 }, (_, index) => {
+    const t = index / 6;
+    const wobble = Math.sin(t * Math.PI * 2) * 0.09;
+    return at(-0.96 + t * 1.92 + wobble, 0.96 - t * 1.92 + wobble, top + 0.012);
+  });
+  const river = decoration(new THREE.Mesh(
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(riverPoints), 40, 0.075, 6, false),
+    standard(0x4b9ee6, 0.25, 0.1, 0x2a6fb5, 0.55),
+  ));
+  river.scale.y = 0.25;
+  river.position.y = top * 0.75;
+  map.add(river);
+
+  // Three lanes, merged into one mesh: top, middle and bottom.
+  const laneWidth = 0.07;
+  const lane = (from: THREE.Vector3, to: THREE.Vector3) => {
+    const length = from.distanceTo(to);
+    const piece = new THREE.BoxGeometry(length, 0.02, laneWidth);
+    piece.rotateY(-Math.atan2(to.z - from.z, to.x - from.x));
+    piece.translate((from.x + to.x) / 2, top + 0.015, (from.z + to.z) / 2);
+    return piece;
+  };
+  const lanes = decoration(new THREE.Mesh(mergeGeometries([
+    lane(at(-0.82, -0.72), at(-0.82, 0.82)), lane(at(-0.86, 0.82), at(0.72, 0.82)),
+    lane(at(-0.72, -0.72), at(0.72, 0.72)),
+    lane(at(-0.72, -0.82), at(0.86, -0.82)), lane(at(0.82, -0.86), at(0.82, 0.72)),
+  ]), standard(0xcdbb8c, 0.8, 0.02, 0x6b5a33, 0.25)));
+  map.add(lanes);
+
+  // The two ancients sit in opposite corners.
+  const ancient = (name: string, u: number, v: number, color: number) => {
+    const base = solid(new THREE.CylinderGeometry(0.1, 0.15, 0.18, 8), standard(color, 0.35, 0.2, color, 0.7));
+    base.name = name;
+    base.position.copy(at(u, v, top + 0.09));
+    map.add(base);
+  };
+  ancient('gem-dota-radiant', -0.82, -0.82, 0x7be07b);
+  ancient('gem-dota-dire', 0.82, 0.82, 0xff6a5c);
+
+  // A hero's path is traced across the map, as a parsed replay reveals it.
+  const path = new THREE.CatmullRomCurve3([
+    at(-0.74, -0.7), at(-0.46, -0.44), at(-0.2, -0.08), at(0.12, -0.12),
+    at(0.3, 0.14), at(0.12, 0.42), at(0.44, 0.52), at(0.62, 0.66),
+  ].map(point => point.setY(top + 0.05)));
+  const radial = 5;
+  const trail = decoration(new THREE.Mesh(
+    new THREE.TubeGeometry(path, 72, 0.026, radial, false),
+    new THREE.MeshBasicMaterial({ color: 0xb5ffe4, toneMapped: false }),
+  ));
+  trail.name = 'gem-dota-path';
+  trail.userData.curve = path;
+  trail.userData.stride = radial * 6;
+  map.add(trail);
+  const hero = decoration(new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false })));
+  hero.name = 'gem-dota-hero';
+  hero.position.copy(path.getPointAt(1));
+  map.add(hero);
+  return map;
+}
+
 export function makeGem() {
   const group = new THREE.Group();
   group.name = 'gem-dota-sculpture';
-  group.userData.bobAmplitude = 0.075;
-  group.userData.bobSpeed = 1.25;
+  const map = makeMinimap();
+  // Face Radiant's corner toward the home view.
+  map.rotation.y = 0.56;
+  group.add(map);
+
+  // The gem hovers over the map it reads; only the gem bobs and turns.
+  const rig = new THREE.Group();
+  rig.name = 'gem-dota-rig';
+  rig.position.y = 0.72;
+  rig.scale.setScalar(0.64);
+  rig.userData.bobAmplitude = 0.075;
+  rig.userData.bobSpeed = 1.25;
+  group.add(rig);
 
   const gemMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x66d8af,
@@ -161,27 +262,13 @@ export function makeGem() {
   });
   const gem = solid(facetedGemGeometry(), gemMaterial);
   gem.name = 'gem-dota-gem';
-  group.add(gem);
+  rig.add(gem);
   const core = decoration(new THREE.Mesh(new THREE.OctahedronGeometry(.23), new THREE.MeshBasicMaterial({ color: 0xc9ffe7, toneMapped: false })));
   core.name = 'gem-inner-light';
   core.position.y = 1.6;
-  group.add(core);
+  rig.add(core);
   const edges = decoration(new THREE.LineSegments(new THREE.EdgesGeometry(gem.geometry, 24), new THREE.LineBasicMaterial({ color: 0xc1ffe9, transparent: true, opacity: .22, depthWrite: false })));
-  group.add(edges);
-
-  const reflectedLight = decoration(new THREE.Mesh(
-    new THREE.TorusGeometry(1.22, 0.035, 6, 40),
-    new THREE.MeshBasicMaterial({
-      color: PALETTE.teal,
-      transparent: true,
-      opacity: 0.48,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    }),
-  ));
-  reflectedLight.rotation.x = Math.PI / 2;
-  reflectedLight.position.y = 0.13;
-  group.add(reflectedLight);
+  rig.add(edges);
 
   const sparkMaterial = new THREE.MeshBasicMaterial({ color: 0xcafff3, toneMapped: false });
   const sparkleOrbit = new THREE.Group();
@@ -199,7 +286,7 @@ export function makeGem() {
     decoration(spark);
     sparkleOrbit.add(spark);
   });
-  group.add(sparkleOrbit);
+  rig.add(sparkleOrbit);
 
   return group;
 }
@@ -278,6 +365,45 @@ export function makeWisp() {
     vapor.add(mote);
   }
   spirit.add(vapor);
+
+  // The orb keeps a live transcript beside it: the "inspectable" in Wisp.
+  const transcript = new THREE.Group();
+  transcript.name = 'wisp-transcript';
+  // To the home camera's right of the orb, facing it.
+  transcript.position.set(0.72, 1.62, -0.92);
+  transcript.rotation.set(-0.16, 0.91, 0);
+  const screen = decoration(new THREE.Mesh(roundedPanel(0.92, 1.08, 0.04, 0.09), standard(0x0c2226, 0.4, 0.1, 0x0b3a3a, 0.35)));
+  screen.position.z = -0.03;
+  transcript.add(screen);
+  const header = decoration(new THREE.Mesh(roundedPanel(0.92, 0.12, 0.045, 0.05), standard(PALETTE.teal, 0.35, 0.1, PALETTE.teal, 0.5)));
+  header.position.set(0, 0.48, -0.025);
+  transcript.add(header);
+  const lineWidths = [0.62, 0.44, 0.7, 0.36, 0.56, 0.48];
+  const lines = decoration(new THREE.InstancedMesh(
+    new THREE.BoxGeometry(1, 0.045, 0.02),
+    new THREE.MeshBasicMaterial({ color: 0xbff7ee, toneMapped: false }),
+    lineWidths.length,
+  ));
+  lines.name = 'wisp-transcript-lines';
+  lines.userData.widths = lineWidths;
+  lines.frustumCulled = false;
+  transcript.add(lines);
+  const approval = decoration(new THREE.Mesh(mergeGeometries([
+    new THREE.BoxGeometry(0.1, 0.035, 0.03).rotateZ(-0.8).translate(-0.035, -0.02, 0),
+    new THREE.BoxGeometry(0.2, 0.035, 0.03).rotateZ(0.9).translate(0.05, 0.03, 0),
+  ]), new THREE.MeshBasicMaterial({ color: PALETTE.lime, toneMapped: false })));
+  approval.name = 'wisp-approval';
+  approval.position.set(0.3, -0.4, 0.02);
+  transcript.add(approval);
+  spirit.add(transcript);
+
+  const anchor = new THREE.Vector3(-0.46, 0.1, 0).applyEuler(transcript.rotation).add(transcript.position);
+  const tether = decoration(tube([
+    new THREE.Vector3(0.36, 2.02, -0.16),
+    new THREE.Vector3(0.52, 1.95, -0.5),
+    anchor,
+  ], 0.018, standard(0x72f7e8, 0.3, 0.05, PALETTE.teal, 1.2), 14));
+  spirit.add(tether);
 
   return group;
 }
@@ -455,6 +581,44 @@ export function makeKrill() {
       ], 0.022, legMaterial, 6));
     });
   });
+
+  // A chat bubble whose typing dots are Julia's purple, green and red.
+  const bubble = new THREE.Group();
+  bubble.name = 'krill-chat';
+  bubble.position.set(-0.5, 3.02, 0.32);
+  bubble.rotation.y = 1.14;
+  const paper = standard(0xf4efe6, 0.6, 0.02);
+  bubble.add(decoration(new THREE.Mesh(roundedPanel(0.8, 0.46, 0.08, 0.2), paper)));
+  const pointer = decoration(new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 3), paper));
+  pointer.position.set(0.2, -0.27, 0.04);
+  pointer.rotation.z = Math.PI + 0.45;
+  bubble.add(pointer);
+  const dotGeometry = new THREE.SphereGeometry(0.065, 12, 8);
+  [0x9558b2, 0x389826, 0xcb3c33].forEach((color, index) => {
+    const dot = decoration(new THREE.Mesh(dotGeometry, standard(color, 0.3, 0.05, color, 0.25)));
+    dot.name = `krill-typing-${index}`;
+    dot.position.set((index - 1) * 0.2, 0, 0.1);
+    bubble.add(dot);
+  });
+  group.add(bubble);
+
+  // A paper plane loops the island: messages arriving from Telegram and Discord.
+  const orbit = new THREE.Group();
+  orbit.name = 'krill-plane-orbit';
+  orbit.position.set(0.1, 2.2, 0);
+  orbit.userData.spinY = 0.55;
+  orbit.userData.bobAmplitude = 0.12;
+  orbit.userData.bobSpeed = 1.1;
+  decoration(orbit);
+  const nose = [0.3, 0, 0], tail = [-0.2, 0.02, 0], left = [-0.24, 0.04, 0.2], right = [-0.24, 0.04, -0.2], keel = [-0.2, -0.09, 0];
+  const planeGeometry = new THREE.BufferGeometry();
+  planeGeometry.setAttribute('position', new THREE.Float32BufferAttribute([...nose, ...left, ...tail, ...nose, ...tail, ...right, ...nose, ...keel, ...tail], 3));
+  planeGeometry.computeVertexNormals();
+  const plane = decoration(new THREE.Mesh(planeGeometry, new THREE.MeshStandardMaterial({ color: 0xeef4ff, roughness: 0.55, side: THREE.DoubleSide, flatShading: true })));
+  plane.position.set(1.85, 0, 0);
+  plane.rotation.set(0.25, Math.PI / 2, 0);
+  orbit.add(plane);
+  group.add(orbit);
 
   return group;
 }

@@ -74,8 +74,8 @@
   /* The cloud detail and distant pinprick stars are a single cached image.
      Keep this layer still: no blur, animated filters, or per-frame cloud shader. */
   background:
-    linear-gradient(180deg, #060914b8 0%, #06091424 34%, #06091433 64%, #060914e6 100%),
-    linear-gradient(90deg, #060914c2 0%, #06091447 35%, #0609141f 72%, #06091440 100%),
+    linear-gradient(180deg, color-mix(in srgb, var(--obs-bg) 72%, transparent) 0%, color-mix(in srgb, var(--obs-bg) 14%, transparent) 34%, color-mix(in srgb, var(--obs-bg) 20%, transparent) 64%, color-mix(in srgb, var(--obs-bg) 90%, transparent) 100%),
+    linear-gradient(90deg, color-mix(in srgb, var(--obs-bg) 76%, transparent) 0%, color-mix(in srgb, var(--obs-bg) 28%, transparent) 35%, color-mix(in srgb, var(--obs-bg) 12%, transparent) 72%, color-mix(in srgb, var(--obs-bg) 25%, transparent) 100%),
     url('/backgrounds/nebula.webp') center 44% / cover no-repeat;
   opacity: .64;
 }
@@ -93,7 +93,7 @@
   .obs-starfield--universe .obs-starfield__texture { background-size: 760px 625px; }
   .obs-cosmic-clouds {
     background:
-      linear-gradient(180deg, #060914ed 0%, #060914a6 28%, #06091426 49%, #06091466 78%, #060914e6 100%),
+      linear-gradient(180deg, color-mix(in srgb, var(--obs-bg) 93%, transparent) 0%, color-mix(in srgb, var(--obs-bg) 65%, transparent) 28%, color-mix(in srgb, var(--obs-bg) 15%, transparent) 49%, color-mix(in srgb, var(--obs-bg) 40%, transparent) 78%, color-mix(in srgb, var(--obs-bg) 90%, transparent) 100%),
       url('/backgrounds/nebula-mobile.webp') 57% center / auto 100% no-repeat;
     opacity: .58;
   }

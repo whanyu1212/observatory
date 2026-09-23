@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // The four sculptures share a quiet material language with the rest of the world.
 // Geometries used repeatedly within a sculpture are kept local to its builder.
@@ -14,7 +15,7 @@ function solid(geometry: THREE.BufferGeometry, surface: THREE.Material, decorati
   return object;
 }
 
-function roundedPanel(width: number, height: number, depth: number, radius: number) {
+export function roundedPanel(width: number, height: number, depth: number, radius: number) {
   const shape = new THREE.Shape();
   const x = -width / 2;
   const y = -height / 2;
@@ -38,7 +39,7 @@ function roundedPanel(width: number, height: number, depth: number, radius: numb
   });
 }
 
-function roundedFrame(width: number, height: number, depth: number, radius: number, border: number) {
+export function roundedFrame(width: number, height: number, depth: number, radius: number, border: number) {
   const shape = new THREE.Shape();
   const x = -width / 2;
   const y = -height / 2;
@@ -122,9 +123,45 @@ export function makeOpenCouch(): THREE.Group {
     leg.position.set(x, 0.14, 0.34);
     group.add(leg);
   }
-  const canopy = solid(new THREE.TorusGeometry(1.35, 0.035, 5, 22, Math.PI), pillowA, true);
-  canopy.position.set(0, 0.88, -0.43);
-  group.add(canopy);
+
+  // A warm reading lamp and an open journal turn the sofa into a place to reflect.
+  const brass = material(0xc9a36b, 0.4, 0.55);
+  const lampBase = solid(new THREE.CylinderGeometry(0.17, 0.2, 0.05, 12), brass);
+  lampBase.position.set(1.42, 0.2, -0.3);
+  group.add(lampBase);
+  const pole = solid(new THREE.CylinderGeometry(0.022, 0.022, 1.42, 6), brass);
+  pole.position.set(1.42, 0.92, -0.3);
+  group.add(pole);
+  const shade = solid(new THREE.CylinderGeometry(0.17, 0.32, 0.32, 14, 1, true), new THREE.MeshStandardMaterial({
+    color: 0xf6dfb8, roughness: 0.8, emissive: 0xffc47d, emissiveIntensity: 0.55, side: THREE.DoubleSide,
+  }), true);
+  shade.position.set(1.42, 1.72, -0.3);
+  group.add(shade);
+  const bulb = solid(new THREE.SphereGeometry(0.08, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffe2b3, toneMapped: false }), true);
+  bulb.name = 'opencouch-lamp';
+  bulb.position.set(1.42, 1.64, -0.3);
+  group.add(bulb);
+
+  const journal = new THREE.Group();
+  journal.position.set(0.5, 0.79, 0.08);
+  journal.rotation.set(-0.12, -0.35, 0);
+  const cover = solid(new THREE.BoxGeometry(0.62, 0.03, 0.42), material(0xb85c52, 0.7), true);
+  journal.add(cover);
+  const paper = material(0xf5efe2, 0.9);
+  const lines = material(0x9fb3c8, 0.8);
+  for (const side of [-1, 1]) {
+    const page = solid(new THREE.BoxGeometry(0.28, 0.018, 0.38), paper, true);
+    page.position.set(side * 0.145, 0.035, 0);
+    page.rotation.z = side * -0.12;
+    journal.add(page);
+    for (let row = 0; row < 3; row++) {
+      const line = solid(new THREE.BoxGeometry(0.18, 0.006, 0.014), lines, true);
+      line.position.set(side * 0.15, 0.047 + (side > 0 ? -0.018 : 0), -0.1 + row * 0.08);
+      line.rotation.z = side * -0.12;
+      journal.add(line);
+    }
+  }
+  group.add(journal);
   return group;
 }
 
@@ -238,54 +275,83 @@ export function makeMentalGym(): THREE.Group {
 
 export function makeClaudeAnatomy(): THREE.Group {
   const group = new THREE.Group();
-  // The home view is northeast of this island; turn the terminal toward it.
+  // The home view is northeast of this island; turn the diagram toward it.
   group.rotation.y = 0.63;
   const copper = material(0xd89b7c, 0.38, 0.36);
   const dark = material(0x193038, 0.56, 0.16);
   const trace = material(0x79d6c7, 0.42, 0.1, 0x4fb5a6, 0.28);
   const signal = material(0xf2be79, 0.32, 0.17, 0xf2be79, 1.1);
-  const glass = new THREE.MeshStandardMaterial({ color: 0x92d7d0, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide });
+  const loop = material(0x8ff3e2, 0.3, 0.1, 0x6fe0cf, 1.2);
+  const tool = material(0xe9eee6, 0.4, 0.35);
+  const glass = new THREE.MeshStandardMaterial({ color: 0x92d7d0, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide });
 
-  // Slight horizontal fanning gives all three layers a silhouette from home.
+  // An exploded view, read bottom to top: tools, the agent loop, the prompt.
+  const paneGeometry = roundedPanel(1.5, 0.56, 0.03, 0.08);
+  const frameGeometry = roundedFrame(1.58, 0.64, 0.045, 0.1, 0.05);
   const layers = [0, 1, 2].map(index => {
     const layer = new THREE.Group();
     layer.name = `anatomy-layer-${index}`;
-    layer.position.set((index - 1) * 0.33, 1.59 + index * 0.1, (index - 1) * 0.51);
+    layer.position.set((index - 1) * 0.1, 0.78 + index * 0.74, 0);
+    // Tilt each layer back so its face meets a camera looking down on the island.
+    layer.rotation.x = -0.34;
+    panel(layer, paneGeometry, glass, 0, 0, 0, true);
+    panel(layer, frameGeometry, copper, 0, 0, -0.005);
+    // A short caption bar, as on a labelled diagram.
+    panel(layer, roundedPanel(0.34, 0.045, 0.02, 0.018), trace, 0.36, -0.14 + index * 0.02, 0.05, true);
+    panel(layer, roundedPanel(0.22, 0.045, 0.02, 0.018), trace, 0.3, 0.02, 0.05, true);
     group.add(layer);
     return layer;
   });
-  panel(layers[0], roundedPanel(1.93, 1.53, 0.11, 0.12), copper, 0, 0, 0);
-  panel(layers[0], roundedPanel(1.72, 1.31, 0.025, 0.06), dark, 0, 0, 0.13);
 
-  panel(layers[1], roundedPanel(1.74, 1.34, 0.07, 0.1), dark, 0, 0, 0);
-  const core = panel(layers[1], roundedPanel(0.59, 0.5, 0.13, 0.08), signal, 0, 0, 0.12);
-  core.name = 'anatomy-core';
-  for (const side of [-1, 1]) {
-    const circuit = tube([
-      new THREE.Vector3(side * 0.3, 0, 0.11),
-      new THREE.Vector3(side * 0.5, 0, 0.11),
-      new THREE.Vector3(side * 0.5, side * 0.33, 0.11),
-      new THREE.Vector3(side * 0.72, side * 0.33, 0.11),
-    ], 0.024, trace, true);
-    layers[1].add(circuit);
-    panel(layers[1], roundedPanel(0.19, 0.18, 0.04, 0.03), copper, side * 0.73, side * 0.33, 0.11, true);
+  // Tools: a wrench beside a small grid of tool slots.
+  const handle = solid(new THREE.BoxGeometry(0.34, 0.06, 0.04), tool, true);
+  handle.position.set(-0.42, 0, 0.06);
+  handle.rotation.z = 0.5;
+  layers[0].add(handle);
+  const jaw = solid(new THREE.TorusGeometry(0.075, 0.03, 5, 12, Math.PI * 1.45), tool, true);
+  jaw.position.set(-0.28, 0.08, 0.06);
+  jaw.rotation.z = 0.5 - Math.PI * 0.72;
+  layers[0].add(jaw);
+  for (let slot = 0; slot < 3; slot++) {
+    panel(layers[0], roundedPanel(0.12, 0.12, 0.03, 0.025), dark, -0.05 + slot * 0.17 - 0.2, -0.14, 0.04, true);
   }
 
-  panel(layers[2], roundedFrame(1.88, 1.47, 0.04, 0.12, 0.11), copper, 0, 0, 0);
-  panel(layers[2], roundedPanel(1.68, 1.27, 0.01, 0.08), glass, 0, 0, 0.06, true);
-  const prompt = tube([
-    new THREE.Vector3(-0.47, 0.17, 0.09),
-    new THREE.Vector3(-0.23, 0, 0.09),
-    new THREE.Vector3(-0.47, -0.17, 0.09),
-  ], 0.035, signal, true);
-  layers[2].add(prompt);
-  panel(layers[2], roundedPanel(0.31, 0.045, 0.025, 0.018), trace, 0.11, -0.17, 0.08, true);
+  // The agent loop: an almost-closed ring with an arrowhead.
+  const ring = solid(new THREE.TorusGeometry(0.17, 0.034, 6, 28, Math.PI * 1.62), loop, true);
+  ring.name = 'anatomy-core';
+  ring.position.set(-0.3, 0, 0.06);
+  ring.rotation.z = 0.35;
+  layers[1].add(ring);
+  // The arrowhead rides the ring, pointing along its counter-clockwise turn.
+  const arrow = solid(new THREE.ConeGeometry(0.075, 0.14, 3), loop, true);
+  const end = Math.PI * 1.62;
+  arrow.position.set(Math.cos(end) * 0.17, Math.sin(end) * 0.17, 0);
+  arrow.rotation.z = end;
+  ring.add(arrow);
 
-  const foot = solid(new THREE.CylinderGeometry(0.74, 0.9, 0.16, 10), dark);
-  foot.position.y = 0.17;
+  // The prompt: a terminal chevron and cursor.
+  layers[2].add(tube([
+    new THREE.Vector3(-0.52, 0.12, 0.06),
+    new THREE.Vector3(-0.38, 0, 0.06),
+    new THREE.Vector3(-0.52, -0.12, 0.06),
+  ], 0.034, signal, true));
+  const cursor = panel(layers[2], roundedPanel(0.16, 0.05, 0.025, 0.018), signal, -0.2, -0.11, 0.05, true);
+  cursor.name = 'anatomy-cursor';
+
+  // Leader lines join the layers; they stretch as the diagram opens.
+  const leaderGeometry = mergeGeometries([-0.8, 0.8].map(x => new THREE.CylinderGeometry(0.012, 0.012, 1, 5).translate(x, 0, 0)));
+  const leaderMaterial = new THREE.MeshBasicMaterial({ color: 0x79d6c7, transparent: true, opacity: 0.55, depthWrite: false });
+  [0, 1].forEach(index => {
+    const leader = solid(leaderGeometry, leaderMaterial, true);
+    leader.name = `anatomy-leader-${index}`;
+    group.add(leader);
+  });
+
+  const foot = solid(new THREE.CylinderGeometry(0.62, 0.78, 0.14, 10), dark);
+  foot.position.y = 0.16;
   group.add(foot);
-  const stem = solid(new THREE.CylinderGeometry(0.075, 0.1, 0.55, 8), copper);
-  stem.position.set(0, 0.5, -0.35);
+  const stem = solid(new THREE.CylinderGeometry(0.06, 0.08, 0.6, 8), copper);
+  stem.position.set(0, 0.5, -0.08);
   group.add(stem);
   return group;
 }

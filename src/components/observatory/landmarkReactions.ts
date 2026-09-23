@@ -1,9 +1,16 @@
 import * as THREE from 'three';
 import type { ProjectId } from './curiosity';
+import { SHIPPING_BELT, SHIPPING_GATES } from './worldGeometry';
 
 /** Local expressions compose with the scene's existing bob and focus lift. */
 export function createLandmarkReactions(world: THREE.Group) {
-  const gem = world.getObjectByName('landmark-gem-dota')!;
+  const gemRoot = world.getObjectByName('landmark-gem-dota')!;
+  const gem = world.getObjectByName('gem-dota-rig')!;
+  const gemPath = world.getObjectByName('gem-dota-path') as THREE.Mesh;
+  const gemHero = world.getObjectByName('gem-dota-hero')!;
+  const pathCurve = gemPath.userData.curve as THREE.Curve<THREE.Vector3>;
+  const pathStride = gemPath.userData.stride as number;
+  const pathSteps = gemPath.geometry.index!.count / pathStride;
   const gemMesh = world.getObjectByName('gem-dota-gem') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
   const gemCore = world.getObjectByName('gem-inner-light')!;
   const sparkles = world.getObjectByName('gem-sparkles')!;
@@ -12,6 +19,10 @@ export function createLandmarkReactions(world: THREE.Group) {
   const vapor = world.getObjectByName('wisp-vapor')!;
   const wispTail = world.getObjectByName('wisp-tail')!;
   const wispLight = world.getObjectByName('wisp-light') as THREE.PointLight;
+  const transcript = world.getObjectByName('wisp-transcript-lines') as THREE.InstancedMesh;
+  const lineWidths = transcript.userData.widths as number[];
+  const approval = world.getObjectByName('wisp-approval')!;
+  const typing = [0, 1, 2].map(index => world.getObjectByName(`krill-typing-${index}`)!);
   const krill = world.getObjectByName('landmark-krill')!;
   const antennae = world.getObjectByName('krill-antennae')!;
   const tail = world.getObjectByName('krill-tail-fan')!;
@@ -24,9 +35,9 @@ export function createLandmarkReactions(world: THREE.Group) {
     const root = world.getObjectByName(`anatomy-layer-${index}`)!;
     return { root, rest: root.position.clone() };
   });
+  const anatomyLeaders = [0, 1].map(index => world.getObjectByName(`anatomy-leader-${index}`)!);
   const anatomyCore = world.getObjectByName('anatomy-core') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
   const shippingModel = world.getObjectByName('shipping-model')!;
-  const modelRestY = shippingModel.position.y;
   const shippingLights = [0, 1, 2].map(index =>
     world.getObjectByName(`shipping-status-${index}`) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>,
   );
@@ -34,14 +45,18 @@ export function createLandmarkReactions(world: THREE.Group) {
     const root = world.getObjectByName(`bonds-quarter-${index}`)!;
     return { root, rest: root.position.clone(), angle: Math.PI / 4 + index * Math.PI / 2 };
   });
-  const attention = { 'gem-dota': 0, wisp: 0, krill: 0 };
-  const reactionAge = { 'gem-dota': 2, wisp: 2, krill: 2 };
-  const sceneAge = { nimble: 3, 'shipping-ml': 3, 'fractional-bonds': 3, 'claude-code-anatomy': 3 };
+  const attention = { 'gem-dota': 0, wisp: 0, krill: 0, 'claude-code-anatomy': 0 };
+  const reactionAge = { 'gem-dota': 2, wisp: 2, krill: 2, 'claude-code-anatomy': 2 };
+  const sceneAge = { 'fractional-bonds': 3, 'claude-code-anatomy': 3 };
   let previous: ProjectId | null = null;
   let time = 0;
   const toward = new THREE.Vector3();
   const signalStart = new THREE.Vector3();
   const signalEnd = new THREE.Vector3();
+  const lineMatrix = new THREE.Matrix4();
+  const linePosition = new THREE.Vector3();
+  const lineScale = new THREE.Vector3();
+  const identity = new THREE.Quaternion();
   const pulse = (age: number) => age < 1.1 ? Math.sin(Math.PI * age / 1.1) : 0;
   const trigger = (id: ProjectId) => {
     if (id in reactionAge) reactionAge[id as keyof typeof reactionAge] = 0;
@@ -62,13 +77,18 @@ export function createLandmarkReactions(world: THREE.Group) {
       const glint = pulse(reactionAge['gem-dota']);
       if (motion) {
         gem.rotation.y += dt * .13 * (1 - attention['gem-dota']);
-        const aim = Math.atan2(camera.x - gem.position.x, camera.z - gem.position.z);
+        const aim = Math.atan2(camera.x - gemRoot.position.x, camera.z - gemRoot.position.z);
         const turn = Math.atan2(Math.sin(aim - gem.rotation.y), Math.cos(aim - gem.rotation.y));
         gem.rotation.y += turn * attention['gem-dota'] * (1 - Math.exp(-dt * 2.5));
       }
       gemMesh.material.emissiveIntensity = .08 + attention['gem-dota'] * .06 + glint * .12;
       gemCore.scale.setScalar(1 + glint * .32);
       sparkles.scale.setScalar(1 + glint * .14);
+      // The replay traces a hero's path across the minimap, holds, then redraws.
+      const trace = motion ? Math.min(1, (time * .17) % 1.3) : 1;
+      gemPath.geometry.setDrawRange(0, Math.max(1, Math.round(pathSteps * trace)) * pathStride);
+      pathCurve.getPointAt(trace, gemHero.position);
+      gemHero.position.y += .02;
 
       toward.copy(explorer).sub(wisp.position).setY(0).normalize();
       spirit.position.copy(toward).multiplyScalar(.38 * attention.wisp);
@@ -81,6 +101,17 @@ export function createLandmarkReactions(world: THREE.Group) {
         mote.position.set(Math.sin(curl) * age * .3, 1.92 - age * 1.75, Math.cos(curl) * age * .15);
         mote.scale.setScalar(.035 + Math.sin(Math.PI * age) * .12);
       });
+      // Transcript lines scroll up like a terminal and fade at the pane's edges.
+      const scroll = motion ? time * .16 : 0;
+      lineWidths.forEach((width, index) => {
+        const slot = ((index + .5) / lineWidths.length + scroll) % 1;
+        const fade = THREE.MathUtils.clamp(Math.min(slot, 1 - slot) / .1, 0, 1);
+        linePosition.set(-.36 + width / 2, -.4 + slot * .76, .01);
+        lineScale.set(width, fade, 1);
+        transcript.setMatrixAt(index, lineMatrix.compose(linePosition, identity, lineScale));
+      });
+      transcript.instanceMatrix.needsUpdate = true;
+      approval.scale.setScalar(1 + pulse(reactionAge.wisp) * .7);
 
       const flick = pulse(reactionAge.krill);
       tail.rotation.z = motion ? Math.sin(reactionAge.krill * 8) * flick * .5 : 0;
@@ -88,27 +119,37 @@ export function createLandmarkReactions(world: THREE.Group) {
       antennae.rotation.z = motion ? Math.sin(time * 2.1) * .025 + Math.sin(reactionAge.krill * 15) * flick * .095 : 0;
       antennae.rotation.y = motion ? Math.sin(time * 1.3) * .04 + attention.krill * .08 : 0;
       krill.rotation.z = motion ? flick * .055 : 0;
+      typing.forEach((dot, index) => {
+        dot.position.y = motion ? Math.max(0, Math.sin(time * 5 - index * .9)) * .07 : 0;
+      });
 
       (Object.keys(sceneAge) as Array<keyof typeof sceneAge>).forEach(id => {
         sceneAge[id] = motion ? Math.min(3, sceneAge[id] + dt) : 3;
       });
 
-      // Open the terminal to reveal its layers, then settle after one inspection.
+      // The diagram opens further while it is inspected, then closes again.
       const anatomyAge = sceneAge['claude-code-anatomy'];
       const inspection = THREE.MathUtils.smoothstep(anatomyAge, 0, .65) * (1 - THREE.MathUtils.smoothstep(anatomyAge, 1.7, 2.8));
+      const open = Math.max(inspection, attention['claude-code-anatomy']);
       anatomyLayers.forEach(({ root, rest }, index) => {
         root.position.copy(rest);
-        root.position.z += (index - 1) * inspection * .55;
-        root.position.x += (index - 1) * inspection * .24;
-        root.position.y += index * inspection * .16;
+        root.position.y += (index - 1) * open * .3;
+        root.position.x += (index - 1) * open * .1;
       });
-      anatomyCore.material.emissiveIntensity = 1.1 + inspection * .7;
+      anatomyLeaders.forEach((leader, index) => {
+        const lower = anatomyLayers[index].root.position;
+        const upper = anatomyLayers[index + 1].root.position;
+        leader.position.set((lower.x + upper.x) / 2, (lower.y + upper.y) / 2, 0);
+        leader.scale.y = Math.max(.01, upper.y - lower.y - .5);
+      });
+      if (motion) anatomyCore.rotation.z += dt * (.6 + open * 1.6);
+      anatomyCore.material.emissiveIntensity = 1.2 + open * .8;
 
-      // One short handoff around the team; it settles even if the pointer stays put.
-      const handoffAge = sceneAge.nimble;
-      handoff.visible = motion && handoffAge < 2.7;
-      const leg = Math.min(2, Math.floor(handoffAge / 0.9));
-      const phase = Math.min(1, (handoffAge - leg * 0.9) / 0.9);
+      // A task is relayed around the team continuously: the multi-agent handoff.
+      const relay = motion ? time % 3.6 : 0;
+      handoff.visible = motion;
+      const leg = Math.min(2, Math.floor(relay / 1.2));
+      const phase = Math.min(1, (relay - leg * 1.2) / 1.2);
       const nextBot = (leg + 1) % bots.length;
       signalStart.copy(bots[leg].root.position);
       signalEnd.copy(bots[nextBot].root.position);
@@ -116,21 +157,23 @@ export function createLandmarkReactions(world: THREE.Group) {
       signalEnd.y += 1.93;
       handoff.position.lerpVectors(signalStart, signalEnd, THREE.MathUtils.smoothstep(phase, 0, 1));
       handoff.position.y += Math.sin(phase * Math.PI) * 0.43;
-      handoff.scale.setScalar(THREE.MathUtils.clamp(Math.min(handoffAge / 0.12, (2.7 - handoffAge) / 0.12), 0, 1));
       bots.forEach((bot, index) => {
         const receiving = handoff.visible && index === nextBot ? Math.sin(phase * Math.PI) : 0;
         bot.root.rotation.z = receiving * (index === 2 ? -0.12 : 0.12);
         bot.light.material.emissiveIntensity = 1 + receiving * 3.5;
       });
 
-      // A short deployment signal passes from the model through each server tray.
-      const deployAge = sceneAge['shipping-ml'];
-      const modelPulse = pulse(deployAge);
-      shippingModel.position.y = modelRestY + modelPulse * 0.12;
-      shippingModel.scale.setScalar(1 + modelPulse * 0.07);
+      // One delivery: the crate leaves the notebook, clears validate, track and
+      // serve, then slides into the rack. Paused motion shows it mid-pipeline.
+      const delivery = motion ? (time * .2) % 1 : .6;
+      const travel = THREE.MathUtils.smoothstep(delivery, .06, .74);
+      const enter = THREE.MathUtils.smoothstep(delivery, .74, .9);
+      const flow = Math.sign(SHIPPING_BELT.end - SHIPPING_BELT.start);
+      shippingModel.position.x = THREE.MathUtils.lerp(SHIPPING_BELT.start, SHIPPING_BELT.end, travel) + enter * .4 * flow;
+      shippingModel.scale.setScalar(Math.max(.001, Math.min(THREE.MathUtils.smoothstep(delivery, 0, .06), 1 - enter)));
       shippingLights.forEach((light, index) => {
-        const signal = pulse(Math.max(0, deployAge - (2 - index) * 0.4));
-        light.material.emissiveIntensity = 0.35 + signal * 1.8;
+        const offset = (shippingModel.position.x - SHIPPING_GATES[index]) * flow / .12;
+        light.material.emissiveIntensity = .3 + Math.exp(-offset * offset) * 2.4 + (offset > 0 ? .8 : 0);
       });
 
       // A complete coin becomes four pieces, then assembles itself again.

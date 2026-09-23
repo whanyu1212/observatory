@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { ProjectId } from './curiosity';
 import { makeGem, makeWisp, makeKrill } from './projectLandmarks';
-import { makeOpenCouch, makeQuant, makeMentalGym, makeClaudeAnatomy } from './refinedLandmarks';
+import { makeOpenCouch, makeQuant, makeMentalGym, makeClaudeAnatomy, roundedPanel } from './refinedLandmarks';
 import { createAsteroidGeometry, createIslandRockGeometry } from './rockGeometry';
 import { createRockMaterial } from './rockSurface';
 
@@ -31,6 +32,8 @@ export const WORLD_BOUNDS = {
 
 export type WorldBuild = {
   group: THREE.Group;
+  /** Height above each island's origin where its label should float. */
+  labelOffsets: Record<ProjectId, number>;
   ground: THREE.Object3D[];
   pickers: Map<THREE.Object3D, ProjectId>;
   hoverPickers: Map<THREE.Object3D, ProjectId>;
@@ -211,8 +214,19 @@ function makeBonds() {
     slice.position.set(Math.cos(middle) * separation, Math.sin(middle) * separation, 0);
     coin.add(slice);
   }
-  const seal = mesh(new THREE.OctahedronGeometry(0.31, 0), standard(C.ink, 0.28, 0.4));
-  seal.scale.y = 1.5; seal.position.set(0, 0, 0.4); coin.add(seal);
+  // Ethereum's mark: a tall upper pyramid over a shorter lower one, split by a seam.
+  const ether = new THREE.MeshStandardMaterial({ color: 0x8c9cf0, roughness: 0.28, metalness: 0.45, emissive: 0x3d4fb8, emissiveIntensity: 0.25, flatShading: true });
+  const seal = new THREE.Group();
+  seal.name = 'bonds-eth';
+  seal.position.set(0, 0.02, 0.42);
+  const crown = mesh(new THREE.ConeGeometry(0.27, 0.52, 4), ether);
+  crown.position.y = 0.24;
+  const base = mesh(new THREE.ConeGeometry(0.27, 0.32, 4), ether);
+  base.rotation.x = Math.PI;
+  base.position.y = -0.18;
+  seal.add(crown, base);
+  seal.rotation.y = Math.PI / 4;
+  coin.add(seal);
   group.add(coin);
   [-0.76, 0.65].forEach((x, index) => {
     for (let layer = 0; layer < index + 2; layer++) addCylinder(group, 0.42, 0.42, 0.12, [x, 0.17 + layer * 0.14, 0.3], gold, 24);
@@ -220,61 +234,133 @@ function makeBonds() {
   return group;
 }
 
+/** Gate positions along the conveyor, shared with the deployment animation. */
+// The belt runs right to left into the rack, keeping it clear of where the explorer parks.
+export const SHIPPING_GATES = [0.98, 0.58, 0.18];
+export const SHIPPING_BELT = { start: 1.34, end: -0.1, y: 0.62 };
+
 function makeShipping() {
   const group = new THREE.Group();
   group.rotation.y = 0.45;
   const shell = standard(0xb6ced0, 0.48, 0.25);
   const face = standard(0x162d39, 0.7, 0.1);
   const vent = standard(0x667f8b, 0.65, 0.12);
-  const teal = standard(0x55b6aa, 0.38, 0.2);
 
-  // A model artifact over three server trays distinguishes deployment from flight.
+  // Production: the serving rack on the left.
+  const rack = new THREE.Group();
+  rack.position.x = -0.92;
+  rack.scale.setScalar(0.9);
   const base = mesh(new RoundedBoxGeometry(1.94, 0.18, 1.38, 1, 0.06), face);
   base.position.y = 0.13;
-  group.add(base);
+  rack.add(base);
   const trayGeometry = new RoundedBoxGeometry(1.72, 0.42, 1.2, 1, 0.075);
   const faceGeometry = new RoundedBoxGeometry(1.48, 0.25, 0.035, 1, 0.015);
   const ventGeometry = new THREE.BoxGeometry(0.65, 0.032, 0.025);
-  const statusGeometry = new THREE.CircleGeometry(0.065, 12);
   for (let index = 0; index < 3; index++) {
     const y = 0.48 + index * 0.52;
     const tray = mesh(trayGeometry, shell);
     tray.position.y = y;
-    group.add(tray);
+    rack.add(tray);
     const front = mesh(faceGeometry, face);
     front.position.set(0, y, 0.607);
-    group.add(front);
+    rack.add(front);
     for (const offset of [-0.055, 0.055]) {
       const slit = mesh(ventGeometry, vent);
       slit.position.set(-0.18, y + offset, 0.64);
       slit.castShadow = false;
       slit.userData.decorative = true;
-      group.add(slit);
+      rack.add(slit);
     }
-    const light = mesh(statusGeometry, standard(C.aqua, 0.4, 0, C.aqua, 0.35));
+  }
+  // The intake slot the model disappears into.
+  const intake = mesh(new RoundedBoxGeometry(0.06, 0.34, 0.5, 1, 0.02), standard(0x0a171d, 0.8, 0.05, C.aqua, 0.25));
+  intake.position.set(0.87, 0.48, 0);
+  rack.add(intake);
+  group.add(rack);
+
+  // The pipeline: a belt from the notebook, through validate, track and serve gates.
+  const beltLength = SHIPPING_BELT.end - SHIPPING_BELT.start + 0.2;
+  const beltX = (SHIPPING_BELT.start + SHIPPING_BELT.end) / 2;
+  const belt = mesh(new THREE.BoxGeometry(beltLength, 0.08, 0.5), standard(0x51666e, 0.62, 0.12));
+  belt.position.set(beltX, SHIPPING_BELT.y - 0.09, 0);
+  group.add(belt);
+  // Chevrons on the belt point the way to production.
+  const flow = Math.sign(SHIPPING_BELT.end - SHIPPING_BELT.start);
+  const chevron = new THREE.Shape([
+    new THREE.Vector2(0.06, 0), new THREE.Vector2(-0.05, 0.13), new THREE.Vector2(-0.11, 0.13),
+    new THREE.Vector2(0, 0), new THREE.Vector2(-0.11, -0.13), new THREE.Vector2(-0.05, -0.13),
+  ]);
+  const chevrons = mesh(mergeGeometries([0.78, 0.38, -0.02].map(x => new THREE.ShapeGeometry(chevron)
+    .rotateX(-Math.PI / 2).scale(flow, 1, 1).translate(x, 0, 0))),
+  // Mirroring the shape flips its winding, so draw both faces.
+  new THREE.MeshStandardMaterial({ color: 0xc9f3e6, roughness: 0.5, emissive: 0x5fe0a4, emissiveIntensity: 0.35, side: THREE.DoubleSide }));
+  chevrons.position.y = SHIPPING_BELT.y - 0.045;
+  chevrons.castShadow = false;
+  chevrons.userData.decorative = true;
+  group.add(chevrons);
+  const frame = mesh(mergeGeometries([
+    new THREE.BoxGeometry(beltLength, 0.05, 0.04).translate(0, 0, 0.27),
+    new THREE.BoxGeometry(beltLength, 0.05, 0.04).translate(0, 0, -0.27),
+    new THREE.BoxGeometry(0.07, SHIPPING_BELT.y - 0.12, 0.07).translate(-beltLength / 2 + 0.15, -(SHIPPING_BELT.y - 0.12) / 2 - 0.02, 0),
+    new THREE.BoxGeometry(0.07, SHIPPING_BELT.y - 0.12, 0.07).translate(beltLength / 2 - 0.15, -(SHIPPING_BELT.y - 0.12) / 2 - 0.02, 0),
+  ]), vent);
+  frame.position.set(beltX, SHIPPING_BELT.y - 0.07, 0);
+  group.add(frame);
+  const gates = mesh(mergeGeometries(SHIPPING_GATES.flatMap(x => [
+    new THREE.BoxGeometry(0.05, 0.5, 0.05).translate(x, 0.25, 0.29),
+    new THREE.BoxGeometry(0.05, 0.5, 0.05).translate(x, 0.25, -0.29),
+    new THREE.BoxGeometry(0.06, 0.06, 0.64).translate(x, 0.5, 0),
+  ])), shell);
+  gates.position.y = SHIPPING_BELT.y - 0.05;
+  group.add(gates);
+  const statusGeometry = new THREE.SphereGeometry(0.065, 12, 8);
+  SHIPPING_GATES.forEach((x, index) => {
+    const light = mesh(statusGeometry, standard(0x8ff0c4, 0.4, 0, 0x5fe0a4, 0.35));
     light.name = `shipping-status-${index}`;
-    light.position.set(0.55, y, 0.637);
+    light.position.set(x, SHIPPING_BELT.y + 0.54, 0);
     light.castShadow = false;
     light.userData.decorative = true;
     group.add(light);
-  }
+  });
 
+  // The model artifact, packed in a shipping box.
   const model = new THREE.Group();
   model.name = 'shipping-model';
-  model.position.set(0, 2.42, 0);
-  model.rotation.y = Math.PI / 4;
-  model.add(mesh(new RoundedBoxGeometry(0.72, 0.72, 0.72, 1, 0.045), teal));
-  const chip = addBox(model, [0.28, 0.28, 0.018], [0, 0, 0.367], standard(C.cream, 0.5, 0.1));
-  chip.castShadow = false;
+  model.position.set(SHIPPING_BELT.start, SHIPPING_BELT.y + 0.18, 0);
+  model.add(mesh(new RoundedBoxGeometry(0.38, 0.34, 0.36, 1, 0.025), standard(0xc9955b, 0.85, 0.02)));
+  const tape = mesh(new THREE.BoxGeometry(0.39, 0.345, 0.09), standard(0xf1e4c4, 0.55, 0.02));
+  tape.castShadow = false;
+  model.add(tape);
   group.add(model);
-  // A small connector anchors the floating artifact to the deployment stack.
-  const connector = addCylinder(group, 0.027, 0.027, 0.38, [0, 1.89, 0], teal, 6);
-  connector.castShadow = false;
-  connector.userData.decorative = true;
+
+  // Where it starts: a notebook with a few cells.
+  const notebook = new THREE.Group();
+  notebook.position.set(1.62, 0.62, -0.18);
+  notebook.rotation.set(-0.45, -0.3, 0);
+  notebook.add(mesh(roundedPanel(0.52, 0.66, 0.03, 0.05), standard(0xf3efe4, 0.85, 0.02)));
+  const cell = standard(0xf2a54a, 0.6, 0.05);
+  [0.2, 0.02, -0.16].forEach((y, index) => {
+    const block = mesh(new THREE.BoxGeometry(index === 1 ? 0.3 : 0.38, 0.1, 0.012), index === 1 ? cell : vent);
+    block.position.set(0.02, y, 0.04);
+    block.castShadow = false;
+    block.userData.decorative = true;
+    notebook.add(block);
+  });
+  const stand = mesh(new THREE.CylinderGeometry(0.025, 0.04, 0.5, 6), vent);
+  stand.position.set(1.62, 0.3, -0.26);
+  group.add(notebook, stand);
   return group;
 }
 
-
+export // Brings every sculpture to a similar presence at the overview zoom; the small
+// ones otherwise vanish beside the tall gem and the bond coin.
+const landmarkScale: Partial<Record<ProjectId, number>> = {
+  opencouch: 1.25,
+  nimble: 1.12,
+  quantrl: 1.1,
+  'mental-gym': 1.05,
+  'claude-code-anatomy': 1.25,
+};
 
 const landmarkMakers: Record<ProjectId, () => THREE.Group> = {
   'gem-dota': makeGem,
@@ -315,6 +401,7 @@ function makeExplorer() {
     explorer.add(thruster);
   });
   const pointer = mesh(new THREE.ConeGeometry(0.13, 0.42, 6), glow);
+  pointer.name = 'explorer-beacon';
   pointer.position.y = 1.25;
   pointer.rotation.z = Math.PI;
   explorer.add(pointer);
@@ -328,6 +415,7 @@ export function buildWorld(): WorldBuild {
   const pickers = new Map<THREE.Object3D, ProjectId>();
   const hoverPickers = new Map<THREE.Object3D, ProjectId>();
   const animated: THREE.Object3D[] = [];
+  const labelOffsets = {} as Record<ProjectId, number>;
   const rockMaterial = createRockMaterial();
   const fragmentGeometries = [61, 67, 73].map(seed => createAsteroidGeometry(seed, 0));
   // Different silhouettes: a long shelf for Krill, a slender shard for Gem,
@@ -382,6 +470,7 @@ export function buildWorld(): WorldBuild {
 
     const landmark = landmarkMakers[id]();
     landmark.position.set(position.x, position.y + 0.72, position.z);
+    landmark.scale.multiplyScalar(landmarkScale[id] ?? 1);
     landmark.name = `landmark-${id}`;
     landmark.traverse((child) => {
       if (child instanceof THREE.Mesh) {
@@ -395,6 +484,13 @@ export function buildWorld(): WorldBuild {
     });
     group.add(landmark);
 
+    // Labels float just above the sculpture's solid silhouette, ignoring glows.
+    landmark.updateMatrixWorld(true);
+    const bounds = new THREE.Box3();
+    landmark.traverse(child => {
+      if (child instanceof THREE.Mesh && !child.userData.decorative) bounds.expandByObject(child, false);
+    });
+    labelOffsets[id] = (bounds.isEmpty() ? position.y + 3 : bounds.max.y) - position.y + 0.95;
   });
 
   const explorer = makeExplorer();
@@ -404,7 +500,7 @@ export function buildWorld(): WorldBuild {
   hoverLight.position.set(0, -0.55, 0);
   explorer.add(hoverLight);
 
-  return { group, ground, pickers, hoverPickers, animated, explorer, hoverLight };
+  return { group, labelOffsets, ground, pickers, hoverPickers, animated, explorer, hoverLight };
 }
 
 export function makeStarField(count: number, radius: number, size: number, color: number) {
