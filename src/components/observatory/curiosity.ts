@@ -1,5 +1,8 @@
 export type TrailId = 'replays' | 'agents' | 'learning' | 'systems';
-export type ProjectId = 'gem-dota' | 'wisp' | 'krill' | 'opencouch' | 'nimble' | 'quantrl' | 'fractional-bonds' | 'shipping-ml' | 'mental-gym' | 'claude-code-anatomy';
+export type PublicProjectId = 'gem-dota' | 'wisp' | 'krill' | 'opencouch' | 'nimble' | 'quantrl' | 'fractional-bonds' | 'shipping-ml' | 'mental-gym' | 'claude-code-anatomy';
+/** Projects hidden in the world until a visitor flies out and finds them. */
+export type SecretProjectId = 'alpha-workbench';
+export type ProjectId = PublicProjectId | SecretProjectId;
 
 export const trails: { id: TrailId; name: string; question: string; description: string; project: ProjectId }[] = [
   { id: 'replays', name: 'Gaming', question: 'What can games teach us?', description: 'Strategy, competition, and patterns hidden in how we play.', project: 'gem-dota' },
@@ -12,6 +15,8 @@ export const projects: Record<ProjectId, {
   name: string; mapName?: string;
   /** A few words on what the project is, shown beneath its map label. */
   tagline: string;
+  /** Private and unlisted: no repository link, revealed only by exploration. */
+  secret?: true;
   trail: TrailId; title: [string, string]; question: string;
   description: string;
   stack: string[]; repository: string; docs?: string;
@@ -112,5 +117,12 @@ export const projects: Record<ProjectId, {
     repository: 'https://github.com/whanyu1212/claude-code-anatomy',
     docs: 'https://claude-code-anatomy-sigma.vercel.app/',
     gallery: [{ src: '/projects/repositories/claude-code-anatomy.png', width: 1200, height: 600, alt: 'Claude Code Anatomy GitHub repository preview', label: 'GitHub repository' }],
+  },
+  'alpha-workbench': {
+    tagline: 'Agentic trading, in progress',
+    name: 'Alpha Workbench', secret: true, trail: 'agents', title: ['Alpha.', 'In the works.'],
+    question: 'What if a team of agents ran the trading desk?',
+    description: 'A private, in-progress workbench for agentic trading: AI agents that research markets, weigh risk and propose trades, built to test whether a team of agents can find a real edge.',
+    stack: [], repository: '', gallery: [],
   },
 };

@@ -3,6 +3,9 @@ import { createAsteroidGeometry } from './rockGeometry';
 import { createRockMaterial } from './rockSurface';
 
 export const SUN_POSITION = new THREE.Vector3(0, 1, -48);
+export const PLANET_POSITION = new THREE.Vector3(-4, 0, -33);
+/** How close to the planet's centre (horizontally) the explorer may fly. */
+export const PLANET_CLEARANCE = 4.4;
 
 // Distant landmarks add scale and parallax without extra lights or particle loops.
 export function createCelestialScenery() {
@@ -35,7 +38,7 @@ export function createCelestialScenery() {
   object.add(sun);
 
   const planetSystem = new THREE.Group();
-  planetSystem.position.set(-4, 0, -33);
+  planetSystem.position.copy(PLANET_POSITION);
   planetSystem.rotation.z = 0.3;
   const planetGeometry = new THREE.SphereGeometry(3.2, 32, 20);
   const planetPositions = planetGeometry.getAttribute('position');

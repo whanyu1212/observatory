@@ -13,9 +13,10 @@ export function createCameraJourney(position: Vector3, target: Vector3) {
   const offset = new Vector3();
 
   return {
-    focus(point: Vector3, distance: number) {
+    /** Frames `point` from `distance` away, along `from` (a unit direction) or the current view. */
+    focus(point: Vector3, distance: number, from?: Vector3) {
       saved ??= pose();
-      const direction = position.clone().sub(target).normalize();
+      const direction = from ? from.clone().normalize() : position.clone().sub(target).normalize();
       transition = {
         from: pose(),
         to: { position: point.clone().addScaledVector(direction, distance), target: point.clone() },

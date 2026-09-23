@@ -47,6 +47,10 @@
 .playground-discovery-actions { display: flex; align-items: center; gap: 12px; margin-top: 19px; flex-wrap: wrap; }
 .playground-discovery-actions button { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--obs-ink); background: none; border: 0; padding: 8px 0; }
 .playground-discovery-actions .playground-primary { background: var(--obs-accent); color: #14201a; padding: 11px 13px; border-radius: 4px; font-weight: 600; }
+a.playground-primary { display: flex; align-items: center; gap: 8px; font-size: 10px; }
+.playground-discovery-top > .playground-private { color: #e9c77a; }
+.playground-secret-note { margin: -4px 0 10px !important; color: #ffb38f; font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; }
+.playground-menu-private { color: var(--obs-muted); font-style: normal; }
 .playground-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .playground-loading { display: grid; height: 100%; place-items: center; color: var(--obs-muted); font-family: var(--font-mono); font-size: 12px; }
 .playground-challenge-loading { position: fixed; inset: 0; background: #0a1012ef; z-index: 200; display: flex; align-items: center; justify-content: center; gap: 20px; }

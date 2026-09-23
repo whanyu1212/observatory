@@ -23,6 +23,21 @@ export function createLandmarkReactions(world: THREE.Group) {
   const lineWidths = transcript.userData.widths as number[];
   const approval = world.getObjectByName('wisp-approval')!;
   const typing = [0, 1, 2].map(index => world.getObjectByName(`krill-typing-${index}`)!);
+  const roles = ['research', 'risk', 'execution'] as const;
+  const alphaArms = roles.map(role => {
+    const shoulder = world.getObjectByName(`alpha-shoulder-${role}`)!;
+    const elbow = world.getObjectByName(`alpha-elbow-${role}`)!;
+    return { role, shoulder, elbow, shoulderRest: shoulder.rotation.x, elbowRest: elbow.rotation.x };
+  });
+  const alphaSignal = world.getObjectByName('alpha-signal')!;
+  const alphaStops = alphaSignal.userData.stations as THREE.Vector3[];
+  const alphaCurve = world.getObjectByName('alpha-curve') as THREE.Mesh;
+  const alphaCurveStride = alphaCurve.userData.stride as number;
+  const alphaCurveSteps = alphaCurve.geometry.index!.count / alphaCurveStride;
+  const alphaGlyph = world.getObjectByName('alpha-glyph')!;
+  const alphaGlyphScale = alphaGlyph.scale.x;
+  const alphaTop = alphaGlyph.position.clone().add(new THREE.Vector3(-0.1, -0.2, 0));
+  const riskNeedle = world.getObjectByName('alpha-risk-needle')!;
   const kettlebell = world.getObjectByName('mental-gym-kettlebell')!;
   const kettlebellRestY = kettlebell.position.y;
   const reps = [0, 1, 2].map(index =>
@@ -191,6 +206,30 @@ export function createLandmarkReactions(world: THREE.Group) {
       reps.forEach((light, index) => {
         light.material.emissiveIntensity = practice >= [0, 1, 3][index] ? 1.4 : .15;
       });
+
+      // Alpha Workbench runs a six-second desk cycle: research, risk, execution,
+      // then the signal reaches the curve's end and the alpha glyph pulses.
+      const desk = motion ? time % 6 : 5.9;
+      alphaArms.forEach(({ role, shoulder, elbow, shoulderRest, elbowRest }, index) => {
+        const local = desk - index * 1.5;
+        const effort = local > 0 && local < 1.5 ? Math.sin(Math.PI * local / 1.5) : 0;
+        shoulder.rotation.x = shoulderRest + effort * (role === 'execution' ? .35 : .15);
+        elbow.rotation.x = elbowRest + effort * (role === 'execution' ? .3 : -.1);
+        shoulder.rotation.z = role === 'research' ? Math.sin(time * 4) * .18 * effort : 0;
+      });
+      const hop = Math.min(3, Math.floor(desk / 1.5));
+      const hopPhase = THREE.MathUtils.smoothstep(desk - hop * 1.5, 0, 1.5);
+      const from = alphaStops[Math.min(hop, 2)];
+      const to = hop < 2 ? alphaStops[hop + 1] : alphaTop;
+      alphaSignal.position.lerpVectors(from, to, hop < 3 ? hopPhase : 1);
+      alphaSignal.position.y += Math.sin(Math.PI * hopPhase) * (hop < 3 ? .3 : 0);
+      alphaSignal.visible = motion && hop < 3;
+      const rising = motion ? Math.min(1, desk / 4.5) : 1;
+      alphaCurve.geometry.setDrawRange(0, Math.max(1, Math.round(alphaCurveSteps * rising)) * alphaCurveStride);
+      const payoff = desk > 4.5 ? Math.sin(Math.PI * (desk - 4.5) / 1.5) : 0;
+      alphaGlyph.scale.setScalar(alphaGlyphScale * (1 + payoff * .28));
+      alphaGlyph.rotation.y = motion ? Math.sin(time * .6) * .45 : 0;
+      riskNeedle.rotation.z = motion ? Math.sin(time * 1.3) * .5 + Math.sin(time * 7) * .15 * (hop === 1 ? 1 : 0) : .4;
 
       // A complete coin becomes four pieces, then assembles itself again.
       const bondAge = sceneAge['fractional-bonds'];

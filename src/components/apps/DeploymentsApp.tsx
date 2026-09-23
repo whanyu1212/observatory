@@ -14,7 +14,7 @@ interface Project {
 }
 
 const PROJECTS: Project[] = [
-  ...Object.entries(projects).map(([id, project]): Project => ({
+  ...Object.entries(projects).filter(([, project]) => !project.secret).map(([id, project]): Project => ({
     id,
     name: project.name,
     status: id === 'opencouch' ? 'PRE-BETA' : 'OPEN SOURCE',

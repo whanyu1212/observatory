@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@nanostores/react';
+import { Lock } from 'lucide-react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { projects, type ProjectId } from './curiosity';
-import { buildWorld, WORLD_POINTS, WORLD_BOUNDS } from './worldGeometry';
+import { buildWorld, WORLD_POINTS, WORLD_BOUNDS, SECRET_CORRIDOR, SIGNAL_BUOY } from './worldGeometry';
 import { createCameraJourney } from './cameraJourney';
 import { createTravelTrail } from './travelTrail';
 import { createLandmarkReactions } from './landmarkReactions';
 import { createUniverseAtmosphere } from './universeAtmosphere';
-import { SUN_POSITION } from './celestialScenery';
+import { SUN_POSITION, PLANET_POSITION, PLANET_CLEARANCE } from './celestialScenery';
 import { createSceneTheme } from './sceneTheme';
 import { createGlowSprites, type GlowSource } from './glowSprites';
 import { createFlightFeel } from './flightFeel';
@@ -19,6 +20,8 @@ export type ExplorationSceneProps = {
   destination: ProjectId | null;
   selectedProject: ProjectId | null;
   detailProject: ProjectId | null;
+  /** Secret projects the visitor has not found yet: no label, no legend entry. */
+  hiddenProjects: ProjectId[];
   navigationRequest: number;
   motionEnabled: boolean;
   onArrive: (id: ProjectId) => void;
@@ -63,6 +66,7 @@ const shortNames: Record<ProjectId, string> = {
   'shipping-ml': 'Shipping ML',
   'mental-gym': 'Mental Gym',
   'claude-code-anatomy': 'Claude Anatomy',
+  'alpha-workbench': 'Alpha Workbench',
 };
 
 type CameraActions = {
@@ -99,12 +103,13 @@ function ProjectButton({ id, index, buttonRef, onChoose, onLook }: {
     >
       <span aria-hidden="true" style={markerStyle}>{String(index + 1).padStart(2, '0')}</span>
       <span className="world-project-name">{project.mapName ?? project.name}</span>
+      {project.secret && <Lock className="world-project-lock" size={11} aria-hidden="true" />}
       <span className="world-project-tagline" aria-hidden="true">{project.tagline}</span>
     </button>
   );
 }
 
-export function ExplorationScene({ destination, selectedProject, detailProject, navigationRequest, motionEnabled, onArrive, onDepart, onReady }: ExplorationSceneProps) {
+export function ExplorationScene({ destination, selectedProject, detailProject, hiddenProjects, navigationRequest, motionEnabled, onArrive, onDepart, onReady }: ExplorationSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef(new Map<ProjectId, HTMLButtonElement>());
   const navigateRef = useRef<(id: ProjectId) => void>(() => undefined);
@@ -120,6 +125,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
   detailProjectRef.current = detailProject;
   const theme = useStore($theme);
   const themeRef = useRef(theme);
+  const hiddenRef = useRef(hiddenProjects);
+  const signalRef = useRef<HTMLParagraphElement>(null);
   const applyThemeRef = useRef<(theme: SpectrumTheme) => void>(() => undefined);
   const [failed, setFailed] = useState(false);
 
@@ -129,6 +136,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
   useEffect(() => { motionRef.current = motionEnabled; wakeRef.current(true); }, [motionEnabled]);
   useEffect(() => { wakeRef.current(true); }, [detailProject]);
   useEffect(() => { themeRef.current = theme; applyThemeRef.current(theme); }, [theme]);
+  useEffect(() => { hiddenRef.current = hiddenProjects; wakeRef.current(true, true); }, [hiddenProjects]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -252,12 +260,20 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         const point = WORLD_POINTS[id].clone();
         point.y += 2.1;
         // Keep the selected sculpture beside the discovery card on narrower desktops.
-        if (!compact) point.addScaledVector(new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion), THREE.MathUtils.clamp((1100 - width) / 140, 0, 3));
-        journey.focus(point, THREE.MathUtils.clamp(controls.getDistance() * 0.76, controls.minDistance, compact ? 26 : 23));
+        // A reveal view has its own right-hand side; otherwise use the current camera's.
+        const reveal = revealViews[id];
+        const right = reveal ? new THREE.Vector3().crossVectors(reveal.clone().negate(), camera.up).normalize() : new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+        if (!compact) point.addScaledVector(right, THREE.MathUtils.clamp((1100 - width) / 140, 0, 3));
+        journey.focus(point, THREE.MathUtils.clamp(controls.getDistance() * 0.76, controls.minDistance, compact ? 26 : 23), revealViews[id]);
       } else journey.restore();
       interactiveUntil = motionRef.current ? performance.now() + 1400 : 0;
       labelsDirty = true;
       wake();
+    };
+    // The hidden island sits behind the planet from home; on arrival the camera
+    // swings round to its far side and looks back past the planet toward the map.
+    const revealViews: Partial<Record<ProjectId, THREE.Vector3>> = {
+      'alpha-workbench': WORLD_POINTS['alpha-workbench'].clone().sub(PLANET_POSITION).setY(0).normalize().multiplyScalar(Math.cos(.5)).setY(Math.sin(.5)),
     };
     const interruptJourney = () => {
       interactiveUntil = performance.now() + 900;
@@ -293,6 +309,10 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     addGlow('gem-dota-radiant', 0x7be07b, 0.9, .45);
     addGlow('gem-dota-dire', 0xff6a5c, 0.9, .45);
     addGlow('opencouch-lamp', 0xffc98a, 1.9, .7);
+    addGlow('alpha-glyph', 0xffcf6b, 1.1, .38);
+    addGlow('alpha-signal', 0xbff7ee, .8, .9);
+    // The buoy blinks once every couple of seconds, like a distant beacon.
+    addGlow('signal-buoy-light', 0xff8a5c, 1.6, () => (performance.now() / 1000) % 2.4 < .22 ? 1.5 : .1);
     [0x9558b2, 0x389826, 0xcb3c33].forEach((color, index) => addGlow(`krill-light-${index}`, color, .8, .8));
     [0, 1, 2].forEach(index => {
       const rep = world.group.getObjectByName(`mental-gym-rep-${index}`) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | undefined;
@@ -377,6 +397,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     let lastHeading = '';
     let lastLookTarget = '';
     let lastIdleStamp = '';
+    let signalShown = false;
     let idleSince = 0;
     const activePointers = new Set<number>();
     let tapGesture: { pointerId: number; x: number; y: number; moved: number; multi: boolean; button: number } | null = null;
@@ -407,9 +428,30 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     };
     navigateRef.current = setWaypoint;
 
-    const clampFlight = () => {
+    const secretPoint = WORLD_POINTS['alpha-workbench'];
+    const avoidPlanet = (step?: THREE.Vector3) => {
+      // Never fly through the ringed planet: motion that would enter it turns
+      // into sliding around its edge, so flying straight at it still gets past.
+      const dx = current.x - PLANET_POSITION.x, dz = current.z - PLANET_POSITION.z;
+      const distance = Math.hypot(dx, dz);
+      if (distance >= PLANET_CLEARANCE) return;
+      const nx = distance < 1e-3 ? 1 : dx / distance, nz = distance < 1e-3 ? 0 : dz / distance;
+      const tx = -nz, tz = nx;
+      const lean = step ? step.x * tx + step.z * tz : 0;
+      const towardSecret = (secretPoint.x - PLANET_POSITION.x) * tx + (secretPoint.z - PLANET_POSITION.z) * tz;
+      // Follow a deliberate sideways lean; otherwise go round toward the hidden island.
+      const side = step && Math.abs(lean) > step.length() * .3 ? Math.sign(lean) : Math.sign(towardSecret) || 1;
+      const blocked = PLANET_CLEARANCE - distance;
+      current.x = PLANET_POSITION.x + nx * PLANET_CLEARANCE + tx * side * blocked;
+      current.z = PLANET_POSITION.z + nz * PLANET_CLEARANCE + tz * side * blocked;
+    };
+    const clampFlight = (step?: THREE.Vector3) => {
       current.x = THREE.MathUtils.clamp(current.x, WORLD_BOUNDS.minX, WORLD_BOUNDS.maxX);
-      current.z = THREE.MathUtils.clamp(current.z, WORLD_BOUNDS.minZ, WORLD_BOUNDS.maxZ);
+      // Past the far edge of the map, only the corridor toward the planet stays open.
+      const inCorridor = current.x >= SECRET_CORRIDOR.minX && current.x <= SECRET_CORRIDOR.maxX;
+      current.z = THREE.MathUtils.clamp(current.z, inCorridor ? SECRET_CORRIDOR.minZ : WORLD_BOUNDS.minZ, WORLD_BOUNDS.maxZ);
+      if (current.z < WORLD_BOUNDS.minZ) current.x = THREE.MathUtils.clamp(current.x, SECRET_CORRIDOR.minX, SECRET_CORRIDOR.maxX);
+      avoidPlanet(step);
     };
     const cruiseElevation = () => {
       let nearestDistance = Infinity;
@@ -434,6 +476,13 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       const candidates = ids.map((id, index) => {
         const button = labelRefs.current.get(id);
         if (!button) return null;
+        if (hiddenRef.current.includes(id)) {
+          button.style.opacity = '0';
+          button.style.pointerEvents = 'none';
+          button.tabIndex = -1;
+          button.setAttribute('aria-hidden', 'true');
+          return null;
+        }
         projected.copy(WORLD_POINTS[id]);
         projected.y += 2.1 + landmarks[index].lift;
         projected.project(camera);
@@ -611,7 +660,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         targetProject = null;
         move.normalize().multiplyScalar(5.4 * (1 + boost * 1.4) * dt);
         current.add(move);
-        clampFlight();
+        clampFlight(move);
         current.y = THREE.MathUtils.damp(current.y, cruiseElevation(), 5, dt);
         target.copy(current);
         explorerTargetQuat.setFromUnitVectors(forwardAxis, move.clone().normalize());
@@ -620,6 +669,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         if (delta.lengthSq() > 0.01) {
           const travel = motionRef.current ? Math.min(delta.length(), dt * 4.7 * (1 + boost * 1.5)) : delta.length();
           current.add(delta.normalize().multiplyScalar(travel));
+          // `delta` now holds this frame's step.
+          avoidPlanet(delta);
           explorerTargetQuat.setFromUnitVectors(forwardAxis, delta.clone().normalize());
         }
       }
@@ -630,7 +681,9 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       journey.update(dt, animate);
       // While the explorer moves, the view leans a third of the way toward it.
       if (animate && !journey.active && (move.lengthSq() > 0 || target.distanceToSquared(current) > .01)) {
-        chaseGoal.copy(homeTarget).lerp(current, .35);
+        // Beyond the map's edge the view follows much more closely, or the explorer leaves the frame.
+        const beyond = THREE.MathUtils.smoothstep(WORLD_BOUNDS.minZ - current.z, 0, 10);
+        chaseGoal.copy(homeTarget).lerp(current, .35 + beyond * .55);
         chaseStep.copy(chaseGoal).sub(controls.target).multiplyScalar(1 - Math.exp(-1.6 * dt));
         controls.target.add(chaseStep);
         camera.position.add(chaseStep);
@@ -670,6 +723,15 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       if (lookTarget !== lastLookTarget) { host.dataset.lookTarget = lookTarget; lastLookTarget = lookTarget; }
       world.hoverLight.intensity = animate ? 2.15 + Math.sin(now * 0.007) * 0.45 + greeting * 1.3 : 2.25;
       const positionStamp = `${current.x.toFixed(2)},${current.y.toFixed(2)},${current.z.toFixed(2)}`;
+      // Near the buoy, or already out in the corridor, a hidden signal is announced.
+      const nearSignal = hiddenRef.current.length > 0 && (
+        Math.hypot(current.x - SIGNAL_BUOY.x, current.z - SIGNAL_BUOY.z) < 8 || current.z < WORLD_BOUNDS.minZ - 1
+      );
+      if (nearSignal !== signalShown && signalRef.current) {
+        signalShown = nearSignal;
+        signalRef.current.textContent = nearSignal ? 'Faint signal detected beyond the ringed planet…' : '';
+        signalRef.current.dataset.visible = String(nearSignal);
+      }
       if (positionStamp !== lastPositionStamp) {
         host.dataset.explorerX = current.x.toFixed(2);
         host.dataset.explorerY = current.y.toFixed(2);
@@ -711,7 +773,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         if (distance < nearestDistance) { nearest = id; nearestDistance = distance; }
       });
       // Passing an island during manual flight must not start another close-up.
-      const arrivalAllowed = keys.size === 0 && (!targetProject || nearest === targetProject);
+      // Holding only Shift still counts as hovering; steering keys mean passing by.
+      const arrivalAllowed = forwardInput === 0 && rightInput === 0 && (!targetProject || nearest === targetProject);
       if (nearest && arrivalAllowed && nearestDistance < ARRIVAL_RADIUS && arrivedAt !== nearest) {
         arrivedAt = nearest;
         onArriveRef.current(nearest);
@@ -938,7 +1001,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
             .normalize()
             .multiplyScalar(0.34);
           current.add(nudge);
-          clampFlight();
+          clampFlight(nudge);
           target.copy(current);
           target.y = cruiseElevation();
           targetProject = null;
@@ -1117,6 +1180,27 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           transform: translate(-50%, 0);
         }
         .world-destination-legend { display: none; }
+        .world-project-lock { flex: 0 0 auto; color: #e9c77a; }
+        .world-signal {
+          position: absolute;
+          z-index: 6;
+          left: 50%;
+          bottom: 92px;
+          margin: 0;
+          padding: 7px 12px;
+          border-radius: 999px;
+          color: #ffb38f;
+          background: rgba(7,14,16,.9);
+          font: 600 10px/1 "IBM Plex Mono", monospace;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          white-space: nowrap;
+          opacity: 0;
+          transform: translate(-50%, 6px);
+          transition: opacity 400ms ease, transform 400ms ease;
+          pointer-events: none;
+        }
+        .world-signal[data-visible="true"] { opacity: 1; transform: translate(-50%, 0); }
         @media (max-width: 700px) {
           .world-camera-toolbar {
             top: 80px;
@@ -1205,10 +1289,11 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         <button type="button" onClick={() => cameraActionsRef.current.zoom(1)} aria-label="Zoom out" title="Zoom out">&minus;</button>
         <button type="button" onClick={() => cameraActionsRef.current.reset()} aria-label="Reset universe view" title="Reset universe view"><span aria-hidden="true">&#8634;</span><span className="world-reset-label">&nbsp;RESET</span></button>
       </div>
+      <p ref={signalRef} className="world-signal" role="status" aria-live="polite" data-visible="false" />
       <nav className="world-destination-legend" aria-label="World destinations">
-        {ids.map((id, index) => (
+        {ids.filter(id => !hiddenProjects.includes(id)).map(id => (
           <button key={id} type="button" onClick={() => navigateRef.current(id)} aria-label={`Navigate to ${projects[id].name}`}>
-            <b aria-hidden="true">{String(index + 1).padStart(2, '0')}</b>
+            <b aria-hidden="true">{String(ids.indexOf(id) + 1).padStart(2, '0')}</b>
             <span>{shortNames[id]}</span>
           </button>
         ))}

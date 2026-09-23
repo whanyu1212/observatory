@@ -6,6 +6,7 @@ import { makeGem, makeWisp, makeKrill } from './projectLandmarks';
 import { makeOpenCouch, makeQuant, makeMentalGym, makeClaudeAnatomy, roundedPanel } from './refinedLandmarks';
 import { createAsteroidGeometry, createIslandRockGeometry } from './rockGeometry';
 import { createRockMaterial } from './rockSurface';
+import { makeAlphaWorkbench, makeSignalBuoy } from './alphaWorkbench';
 
 export const WORLD_POINTS: Record<ProjectId, THREE.Vector3> = {
   // Island origins: Y is the elevation of the whole island, including its sculpture.
@@ -20,9 +21,16 @@ export const WORLD_POINTS: Record<ProjectId, THREE.Vector3> = {
   'shipping-ml': new THREE.Vector3(16.91, -1.2, -3.63),
   'mental-gym': new THREE.Vector3(5.38, 1.2, 9.7),
   'claude-code-anatomy': new THREE.Vector3(-7.73, 1.4, -3.97),
+  // Hidden directly behind the ringed planet as seen from the home view.
+  'alpha-workbench': new THREE.Vector3(-7.0, -2.4, -41.1),
 };
 
-const islandOrigins = Object.values(WORLD_POINTS);
+/** Beyond the map's far edge, a corridor leads past the planet to the hidden island. */
+export const SECRET_CORRIDOR = { minX: -13, maxX: 3, minZ: -46 };
+export const SIGNAL_BUOY = new THREE.Vector3(-6, 0.8, -17);
+
+// The map's bounds cover only the public islands; the corridor reaches the rest.
+const islandOrigins = Object.entries(WORLD_POINTS).filter(([id]) => id !== 'alpha-workbench').map(([, point]) => point);
 export const WORLD_BOUNDS = {
   minX: Math.min(...islandOrigins.map(point => point.x)) - 3,
   maxX: Math.max(...islandOrigins.map(point => point.x)) + 3,
@@ -360,6 +368,7 @@ const landmarkScale: Partial<Record<ProjectId, number>> = {
   quantrl: 1.1,
   'mental-gym': 1.05,
   'claude-code-anatomy': 1.25,
+  'alpha-workbench': 1.15,
 };
 
 const landmarkMakers: Record<ProjectId, () => THREE.Group> = {
@@ -373,6 +382,7 @@ const landmarkMakers: Record<ProjectId, () => THREE.Group> = {
   'shipping-ml': makeShipping,
   'mental-gym': makeMentalGym,
   'claude-code-anatomy': makeClaudeAnatomy,
+  'alpha-workbench': makeAlphaWorkbench,
 };
 
 function makeExplorer() {
@@ -431,6 +441,7 @@ export function buildWorld(): WorldBuild {
     ['shipping-ml', 1.84, 2.12, 0.65, 37, 1.6],
     ['mental-gym', 2.4, 1.75, -0.28, 41, 0.76],
     ['claude-code-anatomy', 2.12, 1.85, 0.18, 47, 1.2],
+    ['alpha-workbench', 2.1, 1.95, 0.24, 59, 1.15],
   ];
   islands.forEach(([id, rx, rz, rotation, seed, depth]) => {
     const point = WORLD_POINTS[id];
@@ -492,6 +503,13 @@ export function buildWorld(): WorldBuild {
     });
     labelOffsets[id] = (bounds.isEmpty() ? position.y + 3 : bounds.max.y) - position.y + 0.95;
   });
+
+  const buoy = makeSignalBuoy();
+  buoy.position.copy(SIGNAL_BUOY);
+  buoy.userData.baseY = buoy.position.y;
+  buoy.userData.baseScale = buoy.scale.clone();
+  animated.push(buoy);
+  group.add(buoy);
 
   const explorer = makeExplorer();
   explorer.position.set(0, 1.58, 0.4);

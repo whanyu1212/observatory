@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import type { ProjectId, TrailId } from './curiosity';
+import type { PublicProjectId as ProjectId, TrailId } from './curiosity';
 import { projects, trails } from './curiosity';
 import { BackgroundStars } from './BackgroundStars';
 import '@/styles/curiosity-map.css';

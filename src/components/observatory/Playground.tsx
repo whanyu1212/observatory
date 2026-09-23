@@ -1,10 +1,13 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Compass, Flag, MousePointer2, Move, Pause, Play, X } from 'lucide-react';
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowUpRight, Check, Compass, Flag, Lock, MousePointer2, Move, Pause, Play, X } from 'lucide-react';
 import { projects, type ProjectId } from './curiosity';
 import '@/styles/playground.css';
 
 const ExplorationScene = lazy(() => import('./ExplorationScene').then(module => ({ default: module.ExplorationScene })));
 const projectIds = Object.keys(projects) as ProjectId[];
+const publicIds = projectIds.filter(id => !projects[id].secret);
+const secretIds = projectIds.filter(id => projects[id].secret);
+const FOUND_KEY = 'hanyu:found';
 
 interface Props {
   panelProject: ProjectId | null;
@@ -20,6 +23,16 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
   const [navigationRequest, setNavigationRequest] = useState(0);
   const [arrived, setArrived] = useState<ProjectId | null>(null);
   const [discovered, setDiscovered] = useState<ProjectId[]>([]);
+  // Secret islands stay found across visits, once a visitor has flown out to them.
+  const [found, setFound] = useState<ProjectId[]>([]);
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem(FOUND_KEY) ?? '[]');
+      if (Array.isArray(saved)) setFound(secretIds.filter(id => saved.includes(id)));
+    } catch { /* Without storage, a secret is found again each visit. */ }
+  }, []);
+  const hiddenProjects = useMemo(() => secretIds.filter(id => !found.includes(id)), [found]);
+  const listedIds = projectIds.filter(id => !hiddenProjects.includes(id));
   const [menuOpen, setMenuOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -56,6 +69,11 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
     return () => document.removeEventListener('pointerdown', dismiss);
   }, [menuOpen]);
   const arrive = (id: ProjectId) => {
+    if (projects[id].secret && !found.includes(id)) {
+      const next = [...found, id];
+      setFound(next);
+      try { localStorage.setItem(FOUND_KEY, JSON.stringify(next)); } catch { /* Found for this visit only. */ }
+    }
     setArrived(id);
     setDestination(null);
     setDiscovered(previous => previous.includes(id) ? previous : [...previous, id]);
@@ -82,29 +100,37 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
 
     <div className="playground-world">
       <Suspense fallback={<div className="playground-loading" role="status">Assembling a little universe…</div>}>
-        <ExplorationScene destination={destination} selectedProject={arrived} detailProject={panelProject} navigationRequest={navigationRequest} motionEnabled={motionEnabled} onArrive={arrive} onDepart={leaveProject} onReady={() => setReady(true)} />
+        <ExplorationScene destination={destination} selectedProject={arrived} detailProject={panelProject} hiddenProjects={hiddenProjects} navigationRequest={navigationRequest} motionEnabled={motionEnabled} onArrive={arrive} onDepart={leaveProject} onReady={() => setReady(true)} />
       </Suspense>
     </div>
 
     <div className="playground-bottom">
       <div className="playground-actions">
-        <button ref={menuButton} aria-expanded={menuOpen} aria-controls="world-project-menu" onClick={() => setMenuOpen(value => !value)}><Compass size={14} /> Featured projects <span className="obs-mono">{String(projectIds.length).padStart(2, '0')}</span></button>
+        <button ref={menuButton} aria-expanded={menuOpen} aria-controls="world-project-menu" onClick={() => setMenuOpen(value => !value)}><Compass size={14} /> Featured projects <span className="obs-mono">{String(listedIds.length).padStart(2, '0')}</span></button>
         <button onClick={onToggleMotion} aria-label={motionEnabled ? 'Pause motion' : 'Enable motion'} aria-pressed={motionEnabled}>{motionEnabled ? <Pause size={14} /> : <Play size={14} />}<span className="playground-motion-label">{motionEnabled ? 'Pause motion' : 'Enable motion'}</span></button>
       </div>
     </div>
 
     {menuOpen && <div ref={menuRef} id="world-project-menu" className="playground-menu" onKeyDown={event => { if (event.key === 'Escape') { setMenuOpen(false); menuButton.current?.focus(); } }}>
       <div className="playground-menu-heading obs-mono">FEATURED PROJECTS<button aria-label="Close project menu" onClick={() => { setMenuOpen(false); menuButton.current?.focus(); }}><X size={16} /></button></div>
-      {projectIds.map((id, index) => <button key={id} data-project={id} onClick={() => { go(id); menuButton.current?.focus(); }}><span className="obs-mono">{String(index + 1).padStart(2, '0')}</span><span>{projects[id].name}</span>{discovered.includes(id) ? <Check size={14} aria-label="Discovered" /> : <ArrowUpRight size={14} />}</button>)}
+      {listedIds.map(id => <button key={id} data-project={id} onClick={() => { go(id); menuButton.current?.focus(); }}><span className="obs-mono">{String(projectIds.indexOf(id) + 1).padStart(2, '0')}</span><span>{projects[id].name}{projects[id].secret && <em className="playground-menu-private"> · private</em>}</span>{discovered.includes(id) ? <Check size={14} aria-label="Discovered" /> : <ArrowUpRight size={14} />}</button>)}
     </div>}
 
-    <div className="playground-announcement" role="status" aria-live="polite">{arrived ? `Discovered ${projects[arrived].name}. ${discovered.length} of ${projectIds.length} featured projects explored.` : destination ? `Travelling to ${projects[destination].name}.` : ''}</div>
+    <div className="playground-announcement" role="status" aria-live="polite">{arrived ? (projects[arrived].secret
+      ? `Discovered ${projects[arrived].name}, a private project still in progress.`
+      : `Discovered ${projects[arrived].name}. ${discovered.filter(id => publicIds.includes(id)).length} of ${publicIds.length} featured projects explored.`) : destination ? `Travelling to ${projects[destination].name}.` : ''}</div>
     {project && arrived && <aside className="playground-discovery" aria-label={`${project.name} discovery`}>
-      <div className="playground-discovery-top"><span className="obs-mono"><Flag size={12} /> PROJECT DISCOVERED</span><button aria-label="Close discovery" onClick={returnToWorld}><X size={17} /></button></div>
+      <div className="playground-discovery-top">{project.secret
+        ? <span className="obs-mono playground-private"><Lock size={12} /> PRIVATE · IN PROGRESS</span>
+        : <span className="obs-mono"><Flag size={12} /> PROJECT DISCOVERED</span>}<button aria-label="Close discovery" onClick={returnToWorld}><X size={17} /></button></div>
+      {project.secret && <p className="playground-secret-note">You found something I haven't shipped yet.</p>}
       <h2>{project.name}</h2><p className="playground-question">{project.question}</p>
       <p className="playground-description">{project.description}</p>
       <div className="playground-discovery-actions">
-        <button className="playground-primary" onClick={() => onViewProject(arrived)}>Explore the project <ArrowUpRight size={14} /></button>
+        {project.secret
+          // Private work has no repository to show; the way in is a conversation.
+          ? <a className="playground-primary" href={`mailto:whanyu47@gmail.com?subject=${encodeURIComponent(project.name)}`}>Ask me about it <ArrowUpRight size={14} /></a>
+          : <button className="playground-primary" onClick={() => onViewProject(arrived)}>Explore the project <ArrowUpRight size={14} /></button>}
       </div>
     </aside>}
   </section>;
