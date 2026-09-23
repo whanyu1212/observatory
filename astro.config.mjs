@@ -15,5 +15,10 @@ export default defineConfig({
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      // three.js (~600 kB) is its own chunk and only loads lazily with the 3D scene,
+      // behind the "Assembling a little universe…" fallback, so it never blocks first paint.
+      chunkSizeWarningLimit: 650,
+    },
   },
 });

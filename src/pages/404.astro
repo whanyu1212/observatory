@@ -1,0 +1,81 @@
+---
+import HUDLayout from '@/layouts/HUDLayout.astro';
+---
+
+<HUDLayout title="Off the map — Hanyu Wu" noindex>
+  <main class="lost">
+    <div class="lost-stars" aria-hidden="true"></div>
+    <p class="lost-eyebrow"><span aria-hidden="true"></span>SIGNAL LOST · 404</p>
+    <h1>You drifted <em>off the map.</em></h1>
+    <p class="lost-copy">No island charted at these coordinates. The universe is still out there, and it's only one jump away.</p>
+    <a class="lost-home" href="/">Return to the Observatory <span aria-hidden="true">→</span></a>
+  </main>
+</HUDLayout>
+
+<style>
+  .lost {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    min-height: 100svh;
+    place-content: center;
+    padding: 48px 24px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 70vw 520px at 70% 30%, color-mix(in srgb, var(--obs-glow), transparent 82%), transparent 72%),
+      var(--obs-bg);
+    color: var(--obs-ink);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .lost-stars {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: url('/starfield-sparse.svg') center / 900px repeat;
+    opacity: .55;
+  }
+  .lost-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 22px;
+    color: var(--obs-muted);
+    font: 500 11px/1.6 'IBM Plex Mono', monospace;
+    letter-spacing: .12em;
+  }
+  .lost-eyebrow span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--obs-accent);
+    box-shadow: 0 0 10px var(--obs-accent);
+  }
+  h1 {
+    max-width: 11ch;
+    margin: 0;
+    font-size: clamp(56px, 11vw, 118px);
+    font-weight: 500;
+    line-height: .95;
+    letter-spacing: -.045em;
+  }
+  h1 em { color: var(--obs-accent); font-style: normal; }
+  .lost-copy {
+    max-width: 420px;
+    margin: 26px 0 34px;
+    color: var(--obs-muted);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .lost-home {
+    justify-self: start;
+    padding: 13px 20px;
+    border: 1px solid color-mix(in srgb, var(--obs-accent), transparent 55%);
+    border-radius: 999px;
+    color: var(--obs-accent);
+    font: 500 12px/1 'IBM Plex Mono', monospace;
+    letter-spacing: .06em;
+    text-decoration: none;
+    transition: background .2s ease, color .2s ease;
+  }
+  .lost-home:hover, .lost-home:focus-visible { background: var(--obs-accent); color: var(--obs-bg); }
+</style>

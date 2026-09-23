@@ -76,6 +76,10 @@ export function Observatory({ repoStats = {} }: { repoStats?: RepoStatsMap }) {
   }, []);
 
   useEffect(() => {
+    document.title = section === 'overview' ? 'Hanyu Wu — The Observatory' : `${section[0].toUpperCase() + section.slice(1)} — Hanyu Wu`;
+  }, [section]);
+
+  useEffect(() => {
     const theme = direction === 'signal' ? 'ultraviolet' : direction === 'blueprint' ? 'polar' : direction === 'aurora' ? 'aurora' : 'observatory';
     document.documentElement.dataset.theme = theme;
     $theme.set(theme);
