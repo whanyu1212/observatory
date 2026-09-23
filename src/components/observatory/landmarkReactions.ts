@@ -38,6 +38,18 @@ export function createLandmarkReactions(world: THREE.Group) {
   const alphaGlyphScale = alphaGlyph.scale.x;
   const alphaTop = alphaGlyph.position.clone().add(new THREE.Vector3(-0.1, -0.2, 0));
   const riskNeedle = world.getObjectByName('alpha-risk-needle')!;
+  const shippingIntake = world.getObjectByName('shipping-intake') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+  const candles = [0, 1, 2, 3].map(index => ({
+    body: world.getObjectByName(`quant-candle-${index}`)!,
+    wick: world.getObjectByName(`quant-wick-${index}`)!,
+  }));
+  const cushions = [0, 1].map(index => {
+    const cushion = world.getObjectByName(`opencouch-cushion-${index}`)!;
+    return { cushion, restY: cushion.scale.y };
+  });
+  const lampShade = world.getObjectByName('opencouch-shade') as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+  const lampBulb = world.getObjectByName('opencouch-lamp')!;
+  const krillBubble = world.getObjectByName('krill-chat')!;
   const kettlebell = world.getObjectByName('mental-gym-kettlebell')!;
   const kettlebellRestY = kettlebell.position.y;
   const reps = [0, 1, 2].map(index =>
@@ -68,6 +80,9 @@ export function createLandmarkReactions(world: THREE.Group) {
   const attention = { 'gem-dota': 0, wisp: 0, krill: 0, 'claude-code-anatomy': 0 };
   const reactionAge = { 'gem-dota': 2, wisp: 2, krill: 2, 'claude-code-anatomy': 2 };
   const sceneAge = { 'fractional-bonds': 3, 'claude-code-anatomy': 3, 'mental-gym': 3 };
+  // Seconds since the explorer last arrived at each island: its signature moment.
+  const arrival: Partial<Record<ProjectId, number>> = {};
+  const since = (id: ProjectId) => arrival[id] ?? Infinity;
   let previous: ProjectId | null = null;
   let time = 0;
   const toward = new THREE.Vector3();
@@ -84,8 +99,12 @@ export function createLandmarkReactions(world: THREE.Group) {
   };
 
   return {
-    arrive: trigger,
+    arrive(id: ProjectId) {
+      trigger(id);
+      arrival[id] = 0;
+    },
     update(dt: number, motion: boolean, active: ProjectId | null, explorer: THREE.Vector3, camera: THREE.Vector3) {
+      (Object.keys(arrival) as ProjectId[]).forEach(id => { arrival[id] = motion ? arrival[id]! + dt : Infinity; });
       if (active !== previous && active) trigger(active);
       previous = active;
       if (motion) time += dt;
@@ -105,7 +124,9 @@ export function createLandmarkReactions(world: THREE.Group) {
       gemCore.scale.setScalar(1 + glint * .32);
       sparkles.scale.setScalar(1 + glint * .14);
       // The replay traces a hero's path across the minimap, holds, then redraws.
-      const trace = motion ? Math.min(1, (time * .17) % 1.3) : 1;
+      // On arrival the replay runs the hero's whole path at speed, then resumes its pace.
+      const replay = since('gem-dota') < 1.3;
+      const trace = !motion ? 1 : replay ? since('gem-dota') / 1.3 : Math.min(1, (time * .17) % 1.3);
       gemPath.geometry.setDrawRange(0, Math.max(1, Math.round(pathSteps * trace)) * pathStride);
       pathCurve.getPointAt(trace, gemHero.position);
       gemHero.position.y += .02;
@@ -178,6 +199,9 @@ export function createLandmarkReactions(world: THREE.Group) {
       handoff.position.lerpVectors(signalStart, signalEnd, THREE.MathUtils.smoothstep(phase, 0, 1));
       handoff.position.y += Math.sin(phase * Math.PI) * 0.43;
       bots.forEach((bot, index) => {
+        // Arrival: the three agents hop in turn, a quick roll call.
+        const hop = since('nimble') - index * .16;
+        if (hop > 0 && hop < .45) bot.root.position.y += Math.sin(Math.PI * hop / .45) * .32;
         const receiving = handoff.visible && index === nextBot ? Math.sin(phase * Math.PI) : 0;
         bot.root.rotation.z = receiving * (index === 2 ? -0.12 : 0.12);
         bot.light.material.emissiveIntensity = 1 + receiving * 3.5;
@@ -185,7 +209,11 @@ export function createLandmarkReactions(world: THREE.Group) {
 
       // One delivery: the crate leaves the notebook, clears validate, track and
       // serve, then slides into the rack. Paused motion shows it mid-pipeline.
-      const delivery = motion ? (time * .2) % 1 : .6;
+      // On arrival one box ships at speed and the rack flashes as it goes live.
+      const deploying = since('shipping-ml') < 2.2;
+      const delivery = !motion ? .6 : deploying ? since('shipping-ml') / 2.2 : (time * .2) % 1;
+      const live = deploying ? Math.exp(-(((since('shipping-ml') - 2.0) / .18) ** 2)) : 0;
+      shippingIntake.material.emissiveIntensity = .25 + live * 3.5;
       const travel = THREE.MathUtils.smoothstep(delivery, .06, .74);
       const enter = THREE.MathUtils.smoothstep(delivery, .74, .9);
       const flow = Math.sign(SHIPPING_BELT.end - SHIPPING_BELT.start);
@@ -193,7 +221,7 @@ export function createLandmarkReactions(world: THREE.Group) {
       shippingModel.scale.setScalar(Math.max(.001, Math.min(THREE.MathUtils.smoothstep(delivery, 0, .06), 1 - enter)));
       shippingLights.forEach((light, index) => {
         const offset = (shippingModel.position.x - SHIPPING_GATES[index]) * flow / .12;
-        light.material.emissiveIntensity = .3 + Math.exp(-offset * offset) * 2.4 + (offset > 0 ? .8 : 0);
+        light.material.emissiveIntensity = .3 + Math.exp(-offset * offset) * 2.4 + (offset > 0 ? .8 : 0) + live * 2;
       });
 
       // Two quick reps on arrival; otherwise the kettlebell rests on the mat.
@@ -226,10 +254,28 @@ export function createLandmarkReactions(world: THREE.Group) {
       alphaSignal.visible = motion && hop < 3;
       const rising = motion ? Math.min(1, desk / 4.5) : 1;
       alphaCurve.geometry.setDrawRange(0, Math.max(1, Math.round(alphaCurveSteps * rising)) * alphaCurveStride);
-      const payoff = desk > 4.5 ? Math.sin(Math.PI * (desk - 4.5) / 1.5) : 0;
+      const payoff = Math.max(desk > 4.5 ? Math.sin(Math.PI * (desk - 4.5) / 1.5) : 0, pulse(since('alpha-workbench')) * 1.3);
       alphaGlyph.scale.setScalar(alphaGlyphScale * (1 + payoff * .28));
       alphaGlyph.rotation.y = motion ? Math.sin(time * .6) * .45 : 0;
       riskNeedle.rotation.z = motion ? Math.sin(time * 1.3) * .5 + Math.sin(time * 7) * .15 * (hop === 1 ? 1 : 0) : .4;
+
+      // QuantRL: the candles regrow one by one, as if the market just opened.
+      candles.forEach(({ body, wick }, index) => {
+        const grow = THREE.MathUtils.smoothstep(since('quantrl') - index * .14, 0, .5);
+        const scale = since('quantrl') < 1.5 ? .08 + grow * .92 : 1;
+        body.scale.y = body.userData.height * scale;
+        wick.scale.y = wick.userData.height * scale;
+      });
+      // OpenCouch: the lamp warms up and the cushions settle, inviting you to sit.
+      const warmth = pulse(since('opencouch') * .6);
+      lampShade.material.emissiveIntensity = .55 + warmth * 1.4;
+      lampBulb.scale.setScalar(1 + warmth * .5);
+      cushions.forEach(({ cushion, restY }, index) => {
+        cushion.scale.y = restY * (1 + pulse(Math.max(0, since('opencouch') - index * .18)) * .28);
+      });
+      // Krill: the chat bubble pops in with a little overshoot, like a new message.
+      const message = since('krill');
+      krillBubble.scale.setScalar(message < .6 ? .3 + .7 * (1 + 2.2 * (message / .6 - 1) ** 3 + 1.2 * (message / .6 - 1) ** 2) : 1);
 
       // A complete coin becomes four pieces, then assembles itself again.
       const bondAge = sceneAge['fractional-bonds'];

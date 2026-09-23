@@ -14,6 +14,14 @@ import { SUN_POSITION, PLANET_POSITION, PLANET_CLEARANCE } from './celestialScen
 import { createSceneTheme } from './sceneTheme';
 import { createGlowSprites, type GlowSource } from './glowSprites';
 import { createFlightFeel } from './flightFeel';
+import { createRepoSignals } from './repoSignals';
+import { scrollExitProgress } from './scrollExit';
+import { createLogbookFlags } from './logbookFlags';
+import { createComet } from './comet';
+import { $cometWakeUnlocked } from '@/stores/progressStore';
+import type { RepoStatsMap, RepoStats } from '@/lib/repoStats';
+import { soundEffects } from '@/components/effects/AudioEngine';
+import { $audioEnabled } from '@/stores/osStore';
 import { $theme, type SpectrumTheme } from '@/stores/osStore';
 
 export type ExplorationSceneProps = {
@@ -22,6 +30,15 @@ export type ExplorationSceneProps = {
   detailProject: ProjectId | null;
   /** Secret projects the visitor has not found yet: no label, no legend entry. */
   hiddenProjects: ProjectId[];
+  /** GitHub numbers fetched at build time; missing for private projects. */
+  repoStats: RepoStatsMap;
+  /** Islands this visitor has charted, across visits: each gets a planted flag. */
+  charted: ProjectId[];
+  /** 0 at night in Singapore, 1 through the day: the world's light follows it. */
+  daylight: number;
+  /** Called when the explorer catches a comet, and when one escapes. */
+  onCometCaught: () => void;
+  onCometMissed: () => void;
   navigationRequest: number;
   motionEnabled: boolean;
   onArrive: (id: ProjectId) => void;
@@ -30,6 +47,10 @@ export type ExplorationSceneProps = {
 };
 
 const ids = Object.keys(projects) as ProjectId[];
+// Each island's note, in island order: C major pentatonic across two octaves,
+// and one note outside the scale for the hidden island.
+const ISLAND_NOTES = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0, 415.3];
+const SILENCE = ISLAND_NOTES.map(() => 0);
 // The explorer parks about two units beside a landmark, so arrival is judged a little wider.
 const ARRIVAL_RADIUS = 2.3;
 const DEPARTURE_RADIUS = 2.7;
@@ -81,7 +102,8 @@ const emptyCameraActions: CameraActions = {
   reset: () => undefined,
 };
 
-function ProjectButton({ id, index, buttonRef, onChoose, onLook }: {
+function ProjectButton({ id, index, stats, buttonRef, onChoose, onLook }: {
+  stats?: RepoStats;
   id: ProjectId; index: number; buttonRef: (element: HTMLButtonElement | null) => void; onChoose: (id: ProjectId) => void;
   onLook: (id: ProjectId | null) => void;
 }) {
@@ -104,12 +126,12 @@ function ProjectButton({ id, index, buttonRef, onChoose, onLook }: {
       <span aria-hidden="true" style={markerStyle}>{String(index + 1).padStart(2, '0')}</span>
       <span className="world-project-name">{project.mapName ?? project.name}</span>
       {project.secret && <Lock className="world-project-lock" size={11} aria-hidden="true" />}
-      <span className="world-project-tagline" aria-hidden="true">{project.tagline}</span>
+      <span className="world-project-tagline" aria-hidden="true">{project.tagline}{stats && stats.stars > 0 && <b> · ★ {stats.stars}</b>}</span>
     </button>
   );
 }
 
-export function ExplorationScene({ destination, selectedProject, detailProject, hiddenProjects, navigationRequest, motionEnabled, onArrive, onDepart, onReady }: ExplorationSceneProps) {
+export function ExplorationScene({ destination, selectedProject, detailProject, hiddenProjects, repoStats, charted, daylight, onCometCaught, onCometMissed, navigationRequest, motionEnabled, onArrive, onDepart, onReady }: ExplorationSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef(new Map<ProjectId, HTMLButtonElement>());
   const navigateRef = useRef<(id: ProjectId) => void>(() => undefined);
@@ -126,6 +148,14 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
   const theme = useStore($theme);
   const themeRef = useRef(theme);
   const hiddenRef = useRef(hiddenProjects);
+  const repoStatsRef = useRef(repoStats);
+  const chartedRef = useRef(charted);
+  const daylightRef = useRef(daylight);
+  const applyDaylightRef = useRef<(value: number) => void>(() => undefined);
+  const onCometCaughtRef = useRef(onCometCaught);
+  const onCometMissedRef = useRef(onCometMissed);
+  onCometCaughtRef.current = onCometCaught;
+  onCometMissedRef.current = onCometMissed;
   const signalRef = useRef<HTMLParagraphElement>(null);
   const applyThemeRef = useRef<(theme: SpectrumTheme) => void>(() => undefined);
   const [failed, setFailed] = useState(false);
@@ -137,6 +167,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
   useEffect(() => { wakeRef.current(true); }, [detailProject]);
   useEffect(() => { themeRef.current = theme; applyThemeRef.current(theme); }, [theme]);
   useEffect(() => { hiddenRef.current = hiddenProjects; wakeRef.current(true, true); }, [hiddenProjects]);
+  useEffect(() => { chartedRef.current = charted; wakeRef.current(true); }, [charted]);
+  useEffect(() => { daylightRef.current = daylight; applyDaylightRef.current(daylight); }, [daylight]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -333,10 +365,31 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       // Engine halos swell with the flame length, so idle ships only simmer.
       glowSources.push({ object: jet, color: new THREE.Color(0xff9a45), size: 1.7, intensity: () => THREE.MathUtils.clamp((jet.scale.x - .4) * 1.3, .12, 1), offset: new THREE.Vector3(-0.35, 0, 0) });
     });
+    const repoSignals = createRepoSignals(world.ground, repoStatsRef.current, accent);
+    scene.add(repoSignals.object);
+    glowSources.push(...repoSignals.glowSources);
+    const logbook = createLogbookFlags(world.ground, accent, id => chartedRef.current.includes(id));
+    scene.add(logbook.object);
+    glowSources.push(...logbook.glowSources);
+    // Comets cross the whole archipelago, entering and leaving beyond its edges.
+    const mapCenter = new THREE.Vector3((WORLD_BOUNDS.minX + WORLD_BOUNDS.maxX) / 2, 0, (WORLD_BOUNDS.minZ + WORLD_BOUNDS.maxZ) / 2);
+    const comet = createComet(mapCenter, 28);
+    scene.add(comet.object);
+    glowSources.push({ object: comet.head, color: new THREE.Color(0xdff2ff), size: 2.6, intensity: () => comet.brightness * .9 });
+    // Development-only hooks for play-testing the chase; stripped from production builds.
+    if (import.meta.env.DEV) Object.assign(host, {
+      launchComet: comet.launch,
+      cometScreenPoint: () => {
+        const point = comet.head.position.clone().project(camera);
+        return comet.active ? [(point.x * .5 + .5) * width, (-point.y * .5 + .5) * height] : null;
+      },
+    });
     const glows = createGlowSprites(renderer, glowSources);
     scene.add(glows.object);
     const flight = createFlightFeel(world.explorer, accent);
     scene.add(flight.object);
+    // The third comet caught turns the explorer's wake comet-blue.
+    const unsubscribeCometWake = $cometWakeUnlocked.subscribe(unlocked => flight.setCometWake(unlocked));
 
     const sceneTheme = createSceneTheme({
       fog: [(scene.fog as THREE.FogExp2).color],
@@ -350,6 +403,18 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       accent: [accent, world.hoverLight.color, ...(beacon ? [beacon.material.color, beacon.material.emissive] : [])],
     });
     sceneTheme.set(themeRef.current, false);
+    // Night in Singapore dims the world's light; glows and lamps then carry the scene.
+    const setDaylight = (value: number) => {
+      renderer.toneMappingExposure = THREE.MathUtils.lerp(0.9, 1.16, value);
+      hemisphere.intensity = THREE.MathUtils.lerp(1.75, 2.6, value);
+      sun.intensity = THREE.MathUtils.lerp(2.7, 4.4, value);
+    };
+    setDaylight(daylightRef.current);
+    applyDaylightRef.current = value => {
+      setDaylight(value);
+      forceDraw = true;
+      wake();
+    };
     applyThemeRef.current = next => {
       sceneTheme.set(next, motionRef.current);
       forceDraw = true;
@@ -398,6 +463,17 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     let lastLookTarget = '';
     let lastIdleStamp = '';
     let signalShown = false;
+    // Scroll exit: 0 while the universe fills the view, 1 once it has receded.
+    let exitProgress = 0;
+    const savedCamera = new THREE.Vector3();
+    const exitOffset = new THREE.Vector3();
+    const exitOrbit = new THREE.Spherical();
+    let audioClock = 0;
+    let wasBoosting = false;
+    // Set by tapping the comet: the explorer chases it with a boost until it is caught or gone.
+    let pursuing = false;
+    let catchPulse = 0;
+    const silence = () => soundEffects.setWorldLevels(SILENCE);
     let idleSince = 0;
     const activePointers = new Set<number>();
     let tapGesture: { pointerId: number; x: number; y: number; moved: number; multi: boolean; button: number } | null = null;
@@ -422,6 +498,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       if (current.distanceTo(destinationPoint) < ARRIVAL_RADIUS) {
         arrivedAt = id;
         onArriveRef.current(id);
+        const note = ISLAND_NOTES[ids.indexOf(id)];
+        soundEffects.playArrival(note > 500 ? note / 2 : note);
       }
       labelsDirty = true;
       wake();
@@ -586,6 +664,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         atmosphere.setPixelRatio(pixelRatio);
       }
       travelTrail.setPixelRatio(pixelRatio);
+      comet.setPixelRatio(pixelRatio);
       const hostRect = host.getBoundingClientRect();
       // Labels avoid both the introduction and the prominent navigation guide.
       const overlays = host.closest('.playground')?.querySelectorAll<HTMLElement>('.playground-intro, .playground-controls');
@@ -628,6 +707,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     const render = (now: number) => {
       frame = 0;
       if (disposed || !visible || !documentVisible || detailProjectRef.current) return;
+      // Fully faded out below the fold: stop drawing until the page scrolls back.
+      if (exitProgress >= .999 && !forceDraw) return;
       rendering = true;
       const interactive = keys.size > 0 || activePointers.size > 0 || target.distanceToSquared(current) > .01 || now < interactiveUntil;
       const frameInterval = interactive || hoverPending ? 1000 / 60 : 1000 / 30;
@@ -650,12 +731,24 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       cameraForward.normalize();
       cameraRight.crossVectors(cameraForward, camera.up).normalize();
       const move = new THREE.Vector3().addScaledVector(cameraForward, forwardInput).addScaledVector(cameraRight, rightInput);
-      // Shift boosts manual flight; long trips to a destination boost on their own.
+      if (move.lengthSq() > 0 || !comet.active) pursuing = false;
+      if (pursuing) {
+        // Aim where the comet is now, at its height, without leaving the map.
+        target.set(
+          THREE.MathUtils.clamp(comet.head.position.x, WORLD_BOUNDS.minX, WORLD_BOUNDS.maxX),
+          comet.head.position.y - 1.58,
+          THREE.MathUtils.clamp(comet.head.position.z, WORLD_BOUNDS.minZ, WORLD_BOUNDS.maxZ),
+        );
+      }
+      // Shift boosts manual flight; long trips and comet chases boost on their own.
       const wantsBoost = motionRef.current && (
         (keys.has('shift') && move.lengthSq() > 0)
         || (move.lengthSq() === 0 && target.distanceToSquared(current) > 25)
+        || pursuing
       );
       boost = THREE.MathUtils.damp(boost, wantsBoost ? 1 : 0, wantsBoost ? 3 : 5, dt);
+      if (wantsBoost && !wasBoosting) soundEffects.playWhoosh();
+      wasBoosting = wantsBoost;
       if (move.lengthSq() > 0) {
         targetProject = null;
         move.normalize().multiplyScalar(5.4 * (1 + boost * 1.4) * dt);
@@ -688,7 +781,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         controls.target.add(chaseStep);
         camera.position.add(chaseStep);
       }
-      const fov = baseFov + boost * 6;
+      catchPulse = Math.max(0, catchPulse - dt * 1.8);
+      const fov = baseFov + boost * 6 + Math.sin(catchPulse * Math.PI) * 4;
       if (Math.abs(camera.fov - fov) > .01) {
         camera.fov = fov;
         camera.updateProjectionMatrix();
@@ -696,6 +790,18 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         labelsDirty = true;
       }
       controls.update(dt);
+      // Scrolling away pulls the camera up and back for this frame only; the
+      // saved pose is restored after drawing, so the controls never see it.
+      const exiting = exitProgress > 0;
+      if (exiting) {
+        savedCamera.copy(camera.position);
+        const eased = exitProgress * exitProgress * (3 - 2 * exitProgress);
+        exitOrbit.setFromVector3(exitOffset.copy(camera.position).sub(controls.target));
+        exitOrbit.radius *= 1 + eased * 1.6;
+        exitOrbit.phi = THREE.MathUtils.lerp(exitOrbit.phi, 0.18, eased * 0.85);
+        camera.position.copy(controls.target).add(exitOffset.setFromSpherical(exitOrbit));
+        camera.lookAt(controls.target);
+      }
       camera.updateMatrixWorld();
       if (hoverPending && now - lastHoverCheck > 16) {
         hoverPending = false;
@@ -774,16 +880,32 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       });
       // Passing an island during manual flight must not start another close-up.
       // Holding only Shift still counts as hovering; steering keys mean passing by.
-      const arrivalAllowed = forwardInput === 0 && rightInput === 0 && (!targetProject || nearest === targetProject);
+      const arrivalAllowed = !pursuing && forwardInput === 0 && rightInput === 0 && (!targetProject || nearest === targetProject);
       if (nearest && arrivalAllowed && nearestDistance < ARRIVAL_RADIUS && arrivedAt !== nearest) {
         arrivedAt = nearest;
         onArriveRef.current(nearest);
+        const note = ISLAND_NOTES[ids.indexOf(nearest)];
+        soundEffects.playArrival(note > 500 ? note / 2 : note);
       } else if (nearestDistance > DEPARTURE_RADIUS) {
         arrivedAt = null;
       }
 
       atmosphere.update(dt, animate, camera);
       const themeBlending = sceneTheme.update(dt);
+      repoSignals.update(dt, animate);
+      const raisingFlags = logbook.update(dt, animate);
+      const canSpawnComet = !focusedProject && !detailProjectRef.current && exitProgress < .3;
+      const cometEvent = comet.update(dt, animate, canSpawnComet, world.explorer.position, boost > .4);
+      if (cometEvent) {
+        pursuing = false;
+        target.copy(current);
+        soundEffects.stopComet();
+        if (cometEvent === 'caught') {
+          soundEffects.playCatch();
+          catchPulse = 1;
+          onCometCaughtRef.current();
+        } else onCometMissedRef.current();
+      }
       glows.update(dt, animate);
       const cameraStamp = [camera.position.x, camera.position.y, camera.position.z, controls.target.x, controls.target.y, controls.target.z].join(',');
       if (cameraStamp !== lastCameraStamp) {
@@ -838,9 +960,32 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           }
         }
       }
+      if (exiting) {
+        camera.position.copy(savedCamera);
+        camera.lookAt(controls.target);
+        camera.updateMatrixWorld();
+      }
+      // Ten times a second, each island's voice follows the explorer's distance to it.
+      audioClock += dt;
+      if (audioClock > .1) {
+        audioClock = 0;
+        if ($audioEnabled.get() && soundEffects.running && exitProgress < .95) {
+          soundEffects.startWorld(ISLAND_NOTES);
+          soundEffects.setWorldLevels(ids.map(id => {
+            const nearness = 1 - THREE.MathUtils.smoothstep(current.distanceTo(WORLD_POINTS[id]), 2.5, 10);
+            return nearness * nearness;
+          }));
+        } else silence();
+        if (comet.active && $audioEnabled.get() && soundEffects.running && exitProgress < .95) {
+          soundEffects.startComet();
+          projected.copy(comet.head.position).project(camera);
+          const nearness = 1 - THREE.MathUtils.smoothstep(comet.head.position.distanceTo(world.explorer.position), 1.5, 8);
+          soundEffects.setComet(projected.x, Math.min(1, comet.brightness), nearness);
+        } else soundEffects.stopComet();
+      }
       forceDraw = false;
       rendering = false;
-      if (animate || interactive || hoverPending || themeBlending || now - idleSince < 500) scheduleFrame();
+      if (animate || interactive || hoverPending || themeBlending || raisingFlags || now - idleSince < 500) scheduleFrame();
     };
 
     const redraw = () => {
@@ -948,6 +1093,13 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
+      if (comet.active && motionRef.current && raycaster.intersectObject(comet.target, false).length) {
+        pursuing = true;
+        targetProject = null;
+        renderer.domElement.focus({ preventScroll: true });
+        wake();
+        return;
+      }
       const projectHits = raycaster.intersectObjects(pickableProjects, false);
       if (projectHits.length) {
         const id = world.pickers.get(projectHits[0].object);
@@ -1021,7 +1173,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     const onVisibility = () => {
       documentVisible = !document.hidden;
       if (!documentVisible) { keys.clear(); activePointers.clear(); tapGesture = null; }
-      if (documentVisible) start(); else stop();
+      if (documentVisible) start(); else { stop(); silence(); }
     };
 
     renderer.domElement.addEventListener('wheel', onWheelCapture, { capture: true, passive: true });
@@ -1036,6 +1188,23 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     window.addEventListener('blur', onWindowBlur);
     document.addEventListener('visibilitychange', onVisibility);
 
+    const playground = host.closest<HTMLElement>('.playground');
+    const onScroll = () => {
+      if (!playground) return;
+      const { scrolled, progress } = scrollExitProgress(playground);
+      const next = motionRef.current ? progress : 0;
+      // The world lags the page as it recedes, then fades; compositor-only styles.
+      host.style.transform = next > 0 ? `translate3d(0, ${(scrolled * 0.45).toFixed(1)}px, 0)` : '';
+      host.style.opacity = next > 0 ? String(1 - THREE.MathUtils.smoothstep(next, 0.55, 0.95)) : '';
+      if (next === exitProgress) return;
+      exitProgress = next;
+      if (exitProgress >= .95) silence();
+      interactiveUntil = performance.now() + 250;
+      labelsDirty = true;
+      wake();
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(host);
     const labelResizeObserver = new ResizeObserver(refreshLabelSizes);
@@ -1043,7 +1212,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     document.fonts?.ready.then(() => { if (!disposed) refreshLabelSizes(); });
     const intersectionObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
-      if (visible) start(); else stop();
+      if (visible) start(); else { stop(); silence(); }
     }, { rootMargin: '160px' });
     intersectionObserver.observe(host);
 
@@ -1059,6 +1228,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       focusRef.current = () => undefined;
       wakeRef.current = () => undefined;
       applyThemeRef.current = () => undefined;
+      applyDaylightRef.current = () => undefined;
       controls.removeEventListener('start', interruptJourney);
       controls.removeEventListener('change', continueInteraction);
       controls.removeEventListener('end', finishInteraction);
@@ -1067,6 +1237,10 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       labelResizeObserver.disconnect();
       intersectionObserver.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('scroll', onScroll);
+      unsubscribeCometWake();
+      soundEffects.stopWorld();
+      soundEffects.stopComet();
       renderer.domElement.removeEventListener('wheel', onWheelCapture, true);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointermove', onPointerMove);
@@ -1174,6 +1348,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           transition: opacity 160ms ease, transform 160ms ease;
           pointer-events: none;
         }
+        .world-project-tagline b { color: #f3d27f; font-weight: 600; }
         .world-project-label:hover .world-project-tagline,
         .world-project-label:focus-visible .world-project-tagline {
           opacity: 1;
@@ -1274,6 +1449,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       <div aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: 'radial-gradient(ellipse at 55% 55%, rgba(7,15,17,.1), transparent 72%)' }} />
       {ids.map((id, index) => (
         <ProjectButton
+          stats={repoStats[id]}
           key={id}
           id={id}
           index={index}

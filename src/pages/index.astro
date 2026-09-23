@@ -1,8 +1,12 @@
 ---
 import HUDLayout from '@/layouts/HUDLayout.astro';
 import { Observatory } from '@/components/observatory/Observatory';
+import { loadRepoStats } from '@/lib/repoStats';
+
+// Fetched when the site is built, so visitors never call the GitHub API.
+const repoStats = await loadRepoStats();
 ---
 
 <HUDLayout title="Hanyu Wu — The Observatory">
-  <Observatory client:load />
+  <Observatory client:load repoStats={repoStats} />
 </HUDLayout>

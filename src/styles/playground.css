@@ -51,6 +51,15 @@ a.playground-primary { display: flex; align-items: center; gap: 8px; font-size: 
 .playground-discovery-top > .playground-private { color: #e9c77a; }
 .playground-secret-note { margin: -4px 0 10px !important; color: #ffb38f; font-family: var(--font-mono); font-size: 10px; letter-spacing: .04em; }
 .playground-menu-private { color: var(--obs-muted); font-style: normal; }
+.playground-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px !important; color: var(--obs-muted); }
+.playground-stats .playground-stars { color: #f3d27f; }
+/* The receded universe, as one star in the corner. Fixed, so it stays while reading below. */
+.playground-return { position: fixed; z-index: 40; top: 22px; right: clamp(24px,4vw,64px); width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; opacity: 0; transform: scale(.4); transition: opacity .45s ease, transform .45s cubic-bezier(.2,.9,.3,1.4); pointer-events: none; cursor: pointer; }
+.playground-return[data-visible="true"] { opacity: 1; transform: scale(1); pointer-events: auto; }
+.playground-return span { width: 18px; height: 18px; background: var(--obs-accent); clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); filter: drop-shadow(0 0 6px var(--obs-accent)); }
+.playground-return:hover span, .playground-return:focus-visible span { transform: scale(1.25) rotate(45deg); transition: transform .3s ease; }
+.observatory[data-motion="on"] .playground-return[data-visible="true"] span { animation: playground-return-twinkle 3.2s ease-in-out infinite; }
+@keyframes playground-return-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 .playground-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .playground-loading { display: grid; height: 100%; place-items: center; color: var(--obs-muted); font-family: var(--font-mono); font-size: 12px; }
 .playground-challenge-loading { position: fixed; inset: 0; background: #0a1012ef; z-index: 200; display: flex; align-items: center; justify-content: center; gap: 20px; }
@@ -72,3 +81,19 @@ a.playground-primary { display: flex; align-items: center; gap: 8px; font-size: 
 }
 @media (pointer: coarse) { .playground-orbit-hint { display: none; } .playground-touch-hint { display: inline; } }
 @media (max-width: 370px) { .playground-intro h1 { font-size: 41px; } .playground-intro { padding-left: 20px; } .playground-controls { margin-left: 20px; margin-right: 20px; min-width: 0; width: calc(100% - 40px); max-width: none; } }
+
+/* The explorer's logbook: how many islands this visitor has charted. */
+.playground-logbook { display: flex; align-items: center; gap: 9px; margin-right: auto; color: var(--obs-muted); font-size: 9px; letter-spacing: .1em; }
+.playground-logbook-bar { width: 64px; height: 3px; border-radius: 3px; background: #ffffff1a; overflow: hidden; }
+.playground-logbook-bar i { display: block; height: 100%; border-radius: inherit; background: var(--obs-accent); transition: width .6s ease; }
+.playground-logbook[data-complete="true"] { color: var(--obs-accent); }
+/* Hanyu's time in Singapore, under the introduction. */
+/* Scoped under the intro so its paragraph size does not apply. */
+.playground-intro .playground-clock { display: flex; align-items: baseline; gap: 8px; max-width: 255px; margin-top: 14px !important; color: var(--obs-muted); font-size: 9px; line-height: 1.6; letter-spacing: .05em; }
+.playground-clock span { flex: 0 0 auto; transform: translateY(-1px); width: 6px; height: 6px; border-radius: 50%; background: #f3d27f; box-shadow: 0 0 8px #f3d27f; }
+.playground-clock[data-night="true"] span { background: #b9c6ff; box-shadow: 0 0 8px #b9c6ff; }
+
+/* Comet catches, misses and unlocks: a brief message above the controls. */
+.playground-toast { position: absolute; z-index: 8; left: 50%; bottom: 84px; margin: 0; padding: 9px 14px; border-radius: 999px; color: #dff2ff; background: rgba(7,14,16,.92); font-size: 10px; letter-spacing: .06em; white-space: nowrap; opacity: 0; transform: translate(-50%, 8px); transition: opacity .35s ease, transform .35s ease; pointer-events: none; }
+.playground-toast[data-visible="true"] { opacity: 1; transform: translate(-50%, 0); }
+@media (max-width: 700px) { .playground-toast { white-space: normal; width: calc(100% - 32px); text-align: center; border-radius: 12px; } }

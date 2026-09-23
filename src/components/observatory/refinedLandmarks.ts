@@ -91,6 +91,7 @@ export function makeOpenCouch(): THREE.Group {
   const cushionGeometry = new THREE.SphereGeometry(1, 12, 8);
   for (const side of [-1, 1]) {
     const cushion = solid(cushionGeometry, seat);
+    cushion.name = `opencouch-cushion-${side < 0 ? 0 : 1}`;
     cushion.scale.set(0.53, 0.2, 0.48);
     cushion.position.set(side * 0.48, 0.64, 0.04);
     group.add(cushion);
@@ -136,6 +137,7 @@ export function makeOpenCouch(): THREE.Group {
   const shade = solid(new THREE.CylinderGeometry(0.17, 0.32, 0.32, 14, 1, true), new THREE.MeshStandardMaterial({
     color: 0xf6dfb8, roughness: 0.8, emissive: 0xffc47d, emissiveIntensity: 0.55, side: THREE.DoubleSide,
   }), true);
+  shade.name = 'opencouch-shade';
   shade.position.set(1.42, 1.72, -0.3);
   group.add(shade);
   const bulb = solid(new THREE.SphereGeometry(0.08, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffe2b3, toneMapped: false }), true);
@@ -186,16 +188,20 @@ export function makeQuant(): THREE.Group {
     [0.29, 1.19, 0.38, coral],
     [0.84, 1.52, 0.64, cyan],
   ];
-  for (const [x, y, height, surface] of candles) {
+  candles.forEach(([x, y, height, surface], index) => {
     const stem = solid(wick, casing, true);
+    stem.name = `quant-wick-${index}`;
+    stem.userData.height = height + 0.2;
     stem.scale.y = height + 0.2;
     stem.position.set(x, y, -0.008);
     group.add(stem);
     const body = solid(bar, surface, true);
+    body.name = `quant-candle-${index}`;
+    body.userData.height = height;
     body.scale.y = height;
     body.position.set(x, y, 0.019);
     group.add(body);
-  }
+  });
   // A single measured path adds direction without crowding the candlestick display.
   const trend = tube([
     new THREE.Vector3(-1.01, 0.72, 0.06),

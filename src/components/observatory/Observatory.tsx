@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useStore } from '@nanostores/react';
 import { ArrowUpRight, AudioLines, VolumeX } from 'lucide-react';
 import { $audioEnabled, $theme, $windows, minimizeApp } from '@/stores/osStore';
+import { $auroraUnlocked, loadProgress } from '@/stores/progressStore';
 import { soundEffects } from '@/components/effects/AudioEngine';
 import { Playground } from './Playground';
 import { BackgroundStars } from './BackgroundStars';
@@ -9,24 +10,27 @@ import { MeteorShower } from './MeteorShower';
 import { OpenSource } from './OpenSource';
 import { ProjectPanel } from './ProjectPanel';
 import type { ProjectId } from './curiosity';
+import type { RepoStatsMap } from '@/lib/repoStats';
 
 const ExperiencePage = lazy(() => import('./ExperiencePage').then(module => ({ default: module.ExperiencePage })));
 const AboutPage = lazy(() => import('./AboutPage').then(module => ({ default: module.AboutPage })));
 
 type Section = 'overview' | 'experience' | 'about';
-type Direction = 'orbital' | 'signal' | 'blueprint';
+type Direction = 'orbital' | 'signal' | 'blueprint' | 'aurora';
 
 function SectionLoading({ label }: { label: string }) {
   return <div className="obs-section-loading obs-mono" role="status">Loading {label}…</div>;
 }
 
-export function Observatory() {
+export function Observatory({ repoStats = {} }: { repoStats?: RepoStatsMap }) {
   const [section, setSection] = useState<Section>('overview');
   const [direction, setDirection] = useState<Direction>('orbital');
   const [projectPanel, setProjectPanel] = useState<ProjectId | null>(null);
   const [motionChoice, setMotionChoice] = useState<boolean | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const audioOn = useStore($audioEnabled);
+  const auroraUnlocked = useStore($auroraUnlocked);
+  useEffect(() => { loadProgress(); }, []);
   const contentRef = useRef<HTMLDivElement>(null);
   const motionEnabled = motionChoice ?? !reducedMotion;
   const backgroundMotionEnabled = motionEnabled && projectPanel === null;
@@ -72,7 +76,7 @@ export function Observatory() {
   }, []);
 
   useEffect(() => {
-    const theme = direction === 'signal' ? 'ultraviolet' : direction === 'blueprint' ? 'polar' : 'observatory';
+    const theme = direction === 'signal' ? 'ultraviolet' : direction === 'blueprint' ? 'polar' : direction === 'aurora' ? 'aurora' : 'observatory';
     document.documentElement.dataset.theme = theme;
     $theme.set(theme);
   }, [direction]);
@@ -123,7 +127,7 @@ export function Observatory() {
       <main id="portfolio-content" className="obs-main">
         <div ref={contentRef} className="obs-content-focus" tabIndex={-1}>
         <div hidden={section !== 'overview'}>
-          <Playground panelProject={projectPanel} active={section === 'overview'} motionEnabled={motionEnabled && section === 'overview'} onToggleMotion={toggleMotion} onSelect={playProjectSound} onViewProject={openProject} />
+          <Playground repoStats={repoStats} panelProject={projectPanel} active={section === 'overview'} motionEnabled={motionEnabled && section === 'overview'} onToggleMotion={toggleMotion} onViewProject={openProject} />
         </div>
         {section === 'experience' && (
           <Suspense fallback={<SectionLoading label="experience" />}>
@@ -142,7 +146,7 @@ export function Observatory() {
       </main>
 
       <footer className="obs-footer"><span className="obs-mono">HANYU WU <span className="obs-footer-slash">/</span> STILL CURIOUS. STILL BUILDING.</span>
-        <div className="obs-environments" aria-label="Visual environment"><span className="obs-mono">SPECTRUM</span>{([{id:'orbital',label:'Observatory'}, {id:'signal',label:'Signal'}, {id:'blueprint',label:'Blueprint'}] as const).map(item => <button key={item.id} type="button" className={`obs-swatch obs-swatch-${item.id}`} aria-label={`${item.label} environment`} aria-pressed={direction === item.id} onClick={() => setDirection(item.id)}><span /></button>)}</div>
+        <div className="obs-environments" aria-label="Visual environment"><span className="obs-mono">SPECTRUM</span>{([{id:'orbital',label:'Observatory'}, {id:'signal',label:'Signal'}, {id:'blueprint',label:'Blueprint'}, ...(auroraUnlocked ? [{id:'aurora',label:'Aurora (unlocked)'}] : [])] as const).map(item => <button key={item.id} type="button" className={`obs-swatch obs-swatch-${item.id}`} aria-label={`${item.label} environment`} aria-pressed={direction === item.id} onClick={() => setDirection(item.id)}><span /></button>)}</div>
         <a className="obs-footer-contact obs-mono" href="mailto:whanyu47@gmail.com">LET'S CONNECT <ArrowUpRight size={14} /></a>
       </footer>
       {projectPanel && <ProjectPanel projectId={projectPanel} motionEnabled={motionEnabled} onClose={() => setProjectPanel(null)} />}

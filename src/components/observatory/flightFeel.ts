@@ -50,7 +50,7 @@ export function createFlightFeel(explorer: THREE.Object3D, accent: THREE.Color) 
   wakeGeometry.setAttribute('aAge', wakeAge);
   wakeGeometry.setIndex(wakeIndices);
   wakeGeometry.setDrawRange(0, 0);
-  const wakeUniforms = { uColor: { value: accent }, uWidth: { value: 0.16 } };
+  const wakeUniforms = { uColor: { value: accent }, uWidth: { value: 0.16 }, uComet: { value: 0 } };
   const wake = new THREE.Mesh(wakeGeometry, new THREE.ShaderMaterial({
     ...glowBlending,
     side: THREE.DoubleSide,
@@ -75,6 +75,7 @@ export function createFlightFeel(explorer: THREE.Object3D, accent: THREE.Color) 
     `,
     fragmentShader: `
       uniform vec3 uColor;
+      uniform float uComet;
       varying float vSide;
       varying float vAge;
       void main() {
@@ -82,7 +83,9 @@ export function createFlightFeel(explorer: THREE.Object3D, accent: THREE.Color) 
         float fade = (1.0 - vAge) * (1.0 - vAge);
         float strength = (across * across * .5 + pow(across, 6.0) * .7) * fade;
         if (strength < .003) discard;
-        gl_FragColor = vec4(uColor * strength, 1.0);
+        // The comet wake (a reward) runs white-hot at the engines into comet blue.
+        vec3 comet = mix(vec3(1.0, .98, .94), vec3(.42, .72, 1.0), smoothstep(0.0, .6, vAge));
+        gl_FragColor = vec4(mix(uColor, comet, uComet) * strength, 1.0);
         #include <colorspace_fragment>
         gl_FragColor.a = min(1.0, max(gl_FragColor.r, max(gl_FragColor.g, gl_FragColor.b)));
       }
@@ -172,6 +175,7 @@ export function createFlightFeel(explorer: THREE.Object3D, accent: THREE.Color) 
   return {
     object: group,
     get speed() { return speed; },
+    setCometWake(enabled: boolean) { wakeUniforms.uComet.value = enabled ? 1 : 0; },
     /**
      * `heading` is the explorer's unbanked orientation; the result is written
      * to the explorer so the scene's own heading logic never sees the bank.

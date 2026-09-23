@@ -282,6 +282,7 @@ function makeShipping() {
   }
   // The intake slot the model disappears into.
   const intake = mesh(new RoundedBoxGeometry(0.06, 0.34, 0.5, 1, 0.02), standard(0x0a171d, 0.8, 0.05, C.aqua, 0.25));
+  intake.name = 'shipping-intake';
   intake.position.set(0.87, 0.48, 0);
   rack.add(intake);
   group.add(rack);

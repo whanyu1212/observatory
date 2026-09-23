@@ -31,6 +31,16 @@
   --obs-glow: #a45ae6;
 }
 
+:root[data-theme='aurora'] {
+  --obs-bg: #081420;
+  --obs-surface: #0e1f2a;
+  --obs-ink: #eefaf4;
+  --obs-muted: #a3c4bb;
+  --obs-accent: #7cf2c4;
+  --obs-line: #274a47;
+  --obs-glow: #8a5cf0;
+}
+
 :root[data-theme='polar'] {
   --obs-bg: #071827;
   --obs-surface: #0d2235;
@@ -195,6 +205,7 @@ body.app-shell { margin: 0; overflow-x: clip; background: var(--obs-bg); color: 
 .obs-swatch-orbital > span { background: #d9f991; }
 .obs-swatch-signal > span { background: #d5b4ff; }
 .obs-swatch-blueprint > span { background: #84e2ef; }
+.obs-swatch-aurora > span { background: linear-gradient(135deg, #7cf2c4, #a98af5); }
 .obs-live-dot { display: inline-block; flex-shrink: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--obs-accent); box-shadow: 0 0 8px color-mix(in srgb,var(--obs-accent),transparent 55%); }
 .workspace-window { font-family: 'IBM Plex Mono',monospace; }
 .workspace-window.cyber-panel { background: var(--obs-surface); border-color: var(--obs-line); }

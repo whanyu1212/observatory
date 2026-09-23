@@ -13,7 +13,7 @@ export interface WindowState {
   size: { width: number; height: number };
 }
 
-export type SpectrumTheme = 'observatory' | 'polar' | 'ultraviolet' | 'ember' | 'monochrome';
+export type SpectrumTheme = 'observatory' | 'polar' | 'ultraviolet' | 'aurora' | 'ember' | 'monochrome';
 
 export const $theme = atom<SpectrumTheme>('observatory');
 export const $audioEnabled = atom<boolean>(true);
