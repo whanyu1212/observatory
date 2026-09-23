@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ChevronDown, GraduationCap } from 'lucide-react';
 import { AgentWorkflow } from './AgentWorkflow';
 import '@/styles/experience.css';
@@ -43,7 +44,54 @@ const career = [
   },
 ] as const;
 
+const education = [
+  { degree: 'Master’s in Digital Financial Technology', period: 'Aug 2023 — Nov 2025', note: 'Part time' },
+  { degree: 'Bachelor’s in Statistics', period: 'Aug 2016 — May 2020' },
+] as const;
+
+type View = 'interactive' | 'plain';
+const VIEW_KEY = 'hanyu:experience-view';
+
+function savedView(): View {
+  try { return localStorage.getItem(VIEW_KEY) === 'plain' ? 'plain' : 'interactive'; } catch { return 'interactive'; }
+}
+
+/** Every point expanded in one column, for a quick read. */
+function PlainExperience() {
+  return <div className="experience-plain">
+    {career.map(item => <article key={item.id} data-tone={item.theme} className="plain-entry" aria-labelledby={`plain-${item.id}-title`}>
+      <h2 id={`plain-${item.id}-title`}>{item.company}</h2>
+      <p className="plain-role">{item.role}</p>
+      <p className="plain-meta">{item.period} · {item.domain}</p>
+      <p className="plain-summary">{item.description}</p>
+      <ul>
+        {'agentFocus' in item && <li><strong>{item.agentFocus.title}</strong><p>{item.agentFocus.text}</p></li>}
+        {item.work.map(work => <li key={work.title}>
+          <strong>{work.title}</strong>
+          {'outcome' in work && <span className="plain-outcome">{work.outcome}</span>}
+          <p>{work.text}</p>
+        </li>)}
+      </ul>
+    </article>)}
+    <article className="plain-entry" aria-labelledby="plain-education-title">
+      <h2 id="plain-education-title">Education</h2>
+      <p className="plain-role">National University of Singapore</p>
+      <ul>
+        {education.map(item => <li key={item.degree}>
+          <strong>{item.degree}</strong>
+          <span className="plain-outcome">{item.period}{'note' in item && ` · ${item.note}`}</span>
+        </li>)}
+      </ul>
+    </article>
+  </div>;
+}
+
 export function ExperiencePage() {
+  const [view, setView] = useState<View>(savedView);
+  const choose = (next: View) => {
+    setView(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* The toggle still works when storage is unavailable. */ }
+  };
   return <section className="experience" aria-labelledby="experience-title">
     <header className="experience-intro">
       <div>
@@ -53,10 +101,14 @@ export function ExperiencePage() {
       <div className="experience-intro-copy">
         <p className="experience-role">Applied AI engineer &amp; senior data scientist</p>
         <p>AI agents, analytics, and production systems across manufacturing, consulting, and tourism.</p>
+        <div className="experience-view" role="group" aria-label="Experience layout">
+          <button type="button" aria-pressed={view === 'interactive'} onClick={() => choose('interactive')}>Interactive</button>
+          <button type="button" aria-pressed={view === 'plain'} onClick={() => choose('plain')}>Plain</button>
+        </div>
       </div>
     </header>
 
-    <div className="experience-entries">
+    {view === 'plain' ? <PlainExperience /> : <div className="experience-entries">
       {career.map(item => <article key={item.id} id={`career-${item.id}`} data-tone={item.theme} className="career-entry" aria-labelledby={`career-${item.id}-title`}>
         <header className="career-header">
           <p className="career-period">{item.period}</p>
@@ -106,10 +158,9 @@ export function ExperiencePage() {
           <h2 id="education-title">National University of Singapore</h2>
         </header>
         <div className="career-degrees">
-          <article><h3>Master’s in Digital Financial Technology</h3><p>Aug 2023 — Nov 2025 <span>· Part time</span></p></article>
-          <article><h3>Bachelor’s in Statistics</h3><p>Aug 2016 — May 2020</p></article>
+          {education.map(item => <article key={item.degree}><h3>{item.degree}</h3><p>{item.period}{'note' in item && <> <span>· {item.note}</span></>}</p></article>)}
         </div>
       </section>
-    </div>
+    </div>}
   </section>;
 }
