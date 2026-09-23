@@ -1,0 +1,37 @@
+/* Cmd/Ctrl+K: a native modal dialog, centred in the upper third of the screen. */
+.command-palette { width: min(560px, calc(100% - 32px)); max-width: none; max-height: min(520px, calc(100svh - 120px)); margin: 12vh auto auto; padding: 0; border: 1px solid var(--obs-line); border-radius: 14px; background: color-mix(in srgb, var(--obs-surface), transparent 4%); color: var(--obs-ink); box-shadow: 0 30px 90px #000a; overflow: hidden; font-family: 'Space Grotesk', sans-serif; }
+.command-palette::backdrop { background: #02050bb3; backdrop-filter: blur(3px); }
+.command-palette[open] { display: flex; }
+.command-palette-body { display: flex; flex-direction: column; width: 100%; min-height: 0; }
+.command-palette-search { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--obs-line); color: var(--obs-muted); }
+.command-palette-search input { flex: 1; min-width: 0; border: 0; outline: none; background: none; color: var(--obs-ink); font: 400 15px/1.4 'Space Grotesk', sans-serif; }
+.command-palette-search input::placeholder { color: var(--obs-muted); opacity: .75; }
+.command-palette kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; padding: 2px 5px; border-radius: 4px; background: #ffffff10; color: var(--obs-muted); font-family: var(--font-mono); font-size: 9px; }
+.command-palette-list { flex: 1; min-height: 0; margin: 0; padding: 6px 8px 8px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+.command-palette-group { padding: 12px 10px 5px; color: var(--obs-muted); font-size: 9px; }
+.command-palette-item { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 7px; cursor: pointer; font-size: 13px; }
+.command-palette-item[aria-selected='true'] { background: color-mix(in srgb, var(--obs-accent), transparent 88%); }
+.command-palette-item[aria-selected='true'] .command-palette-icon { color: var(--obs-accent); }
+.command-palette-icon { display: grid; place-items: center; width: 16px; flex-shrink: 0; color: var(--obs-muted); }
+.command-palette-label { white-space: nowrap; }
+.command-palette-hint { overflow: hidden; margin-left: auto; color: var(--obs-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.command-palette-tag { flex-shrink: 0; margin-left: auto; color: var(--obs-muted); font-size: 8px; opacity: .8; }
+.command-palette-hint + .command-palette-tag { margin-left: 0; }
+.command-palette-empty { padding: 26px 10px; color: var(--obs-muted); font-size: 12px; text-align: center; }
+.command-palette-footer { display: flex; gap: 16px; margin: 0; padding: 10px 18px; border-top: 1px solid var(--obs-line); color: var(--obs-muted); font-size: 9px; }
+.command-palette-footer span { display: flex; align-items: center; gap: 4px; }
+.observatory[data-motion='on'] .command-palette[open] { animation: command-palette-in .16s ease-out; }
+@keyframes command-palette-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } }
+@media (max-width: 700px) {
+  .command-palette { margin-top: 72px; max-height: calc(100svh - 150px); }
+  /* Phones have no arrow keys to hint at, and little room for taglines. */
+  .command-palette-footer, .command-palette-search kbd { display: none; }
+  .command-palette-hint { display: none; }
+  .command-palette-item { padding: 12px 10px; }
+}
+
+/* The header's way in, for pointers and touch. */
+.obs-command-trigger { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--obs-line); border-radius: 7px; background: none; color: var(--obs-muted); }
+.obs-command-trigger:hover { color: var(--obs-ink); }
+.obs-command-trigger kbd { font-family: var(--font-mono); font-size: 9px; letter-spacing: .04em; }
+@media (pointer: coarse) { .obs-command-trigger kbd { display: none; } .obs-command-trigger { min-height: 44px; min-width: 44px; justify-content: center; } }

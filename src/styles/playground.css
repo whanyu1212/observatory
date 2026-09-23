@@ -103,3 +103,23 @@ a.playground-primary { display: flex; align-items: center; gap: 8px; font-size: 
 @media (max-width: 700px) { .playground-clock-mood { display: none; } .playground-intro .playground-clock { margin-top: 8px !important; } }
 /* On phones the section runs past the screen, so pin the message to the viewport. */
 @media (max-width: 700px) { .playground-toast { position: fixed; bottom: 64px; white-space: normal; width: calc(100% - 32px); text-align: center; border-radius: 12px; } }
+
+/* The autopilot tour: a button beside the menu, a timer on each stop's card, and a status line in flight. */
+.playground-actions .playground-tour-button { color: var(--obs-accent); }
+.playground-actions .playground-tour-button[aria-pressed="true"] { background: #23342df5; }
+.playground-tour-length { color: var(--obs-muted); }
+.playground-tour-progress { display: block; height: 2px; margin: -4px 0 14px; border-radius: 2px; background: #ffffff14; overflow: hidden; }
+.playground-tour-progress i { display: block; height: 100%; background: var(--obs-accent); transform-origin: left; animation: playground-tour-dwell linear forwards; animation-play-state: paused; }
+.playground-tour-progress[data-running="true"] i { animation-play-state: running; }
+@keyframes playground-tour-dwell { from { transform: scaleX(0); } }
+.playground-tour-status { position: absolute; z-index: 8; left: 50%; bottom: 84px; display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 14px; border-radius: 999px; color: var(--obs-accent); background: rgba(7,14,16,.92); font-size: 10px; letter-spacing: .06em; white-space: nowrap; transform: translateX(-50%); }
+.playground-tour-heading { color: #dff2ff; letter-spacing: .02em; }
+.playground-tour-status button { padding: 5px 10px; border: 0; border-radius: 999px; background: #ffffff12; color: var(--obs-muted); font-size: 9px; letter-spacing: .06em; }
+.playground-tour-status button:hover { color: var(--obs-ink); }
+.playground-tour-short { display: none; }
+@media (max-width: 700px) {
+  /* Three buttons share one row on phones: the tour says less, and motion keeps only its icon (and its label for screen readers). */
+  .playground-tour-full, .playground-motion-label { display: none; }
+  .playground-tour-short { display: inline; }
+  .playground-tour-status { position: fixed; bottom: 64px; }
+}

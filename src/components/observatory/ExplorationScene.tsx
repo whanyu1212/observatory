@@ -40,6 +40,8 @@ export type ExplorationSceneProps = {
   onCometCaught: () => void;
   onCometMissed: () => void;
   navigationRequest: number;
+  /** True during the autopilot tour, which keeps comets away so nothing competes with it. */
+  touring: boolean;
   motionEnabled: boolean;
   onArrive: (id: ProjectId) => void;
   onDepart: () => void;
@@ -131,7 +133,7 @@ function ProjectButton({ id, index, stats, buttonRef, onChoose, onLook }: {
   );
 }
 
-export function ExplorationScene({ destination, selectedProject, detailProject, hiddenProjects, repoStats, charted, daylight, onCometCaught, onCometMissed, navigationRequest, motionEnabled, onArrive, onDepart, onReady }: ExplorationSceneProps) {
+export function ExplorationScene({ destination, selectedProject, detailProject, hiddenProjects, repoStats, charted, daylight, onCometCaught, onCometMissed, touring, navigationRequest, motionEnabled, onArrive, onDepart, onReady }: ExplorationSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef(new Map<ProjectId, HTMLButtonElement>());
   const navigateRef = useRef<(id: ProjectId) => void>(() => undefined);
@@ -145,6 +147,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
   const wakeRef = useRef<(force?: boolean, labels?: boolean) => void>(() => undefined);
   const detailProjectRef = useRef(detailProject);
   detailProjectRef.current = detailProject;
+  const touringRef = useRef(touring);
+  touringRef.current = touring;
   const theme = useStore($theme);
   const themeRef = useRef(theme);
   const hiddenRef = useRef(hiddenProjects);
@@ -918,7 +922,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       const themeBlending = sceneTheme.update(dt);
       repoSignals.update(dt, animate);
       const raisingFlags = logbook.update(dt, animate);
-      const canSpawnComet = !focusedProject && !detailProjectRef.current && exitProgress < .3;
+      const canSpawnComet = !focusedProject && !detailProjectRef.current && !touringRef.current && exitProgress < .3;
       const cometEvent = comet.update(dt, animate, canSpawnComet, world.explorer.position, boost > .4);
       if (cometEvent) {
         pursuing = false;
@@ -1120,6 +1124,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       if (comet.active && motionRef.current && raycaster.intersectObject(comet.target, false).length) {
         pursuing = true;
         targetProject = null;
+        // Giving chase takes the controls back from any tour in progress.
+        onDepartRef.current();
         renderer.domElement.focus({ preventScroll: true });
         wake();
         return;

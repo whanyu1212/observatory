@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Compass, Flag, Lock, MousePointer2, Move, Pause, Play, X } from 'lucide-react';
-import { projects, type ProjectId } from './curiosity';
+import { ArrowRight, ArrowUpRight, Check, Compass, Flag, Lock, MousePointer2, Move, Pause, Play, Route, X } from 'lucide-react';
+import { projects, type ProjectId, type PublicProjectId } from './curiosity';
 import { describePush, type RepoStatsMap } from '@/lib/repoStats';
 import { scrollExitProgress } from './scrollExit';
 import { singaporeClock } from './localTime';
@@ -13,6 +13,14 @@ const publicIds = projectIds.filter(id => !projects[id].secret);
 const secretIds = projectIds.filter(id => projects[id].secret);
 const FOUND_KEY = 'hanyu:found';
 const CHARTED_KEY = 'hanyu:charted';
+/** The autopilot tour: four islands that show the range of the work, in order. */
+export const TOUR_STOPS: PublicProjectId[] = ['gem-dota', 'quantrl', 'wisp', 'opencouch'];
+/** How long the tour lingers at each island before flying on, in milliseconds. */
+const TOUR_DWELL = 9000;
+
+/** A request from outside the world, such as the command menu: each new `seq` runs once. */
+export type WorldRequest = { kind: 'fly'; id: ProjectId } | { kind: 'tour' };
+export type WorldCommand = WorldRequest & { seq: number };
 
 interface Props {
   repoStats: RepoStatsMap;
@@ -21,9 +29,10 @@ interface Props {
   motionEnabled: boolean;
   onToggleMotion: () => void;
   onViewProject: (id: ProjectId) => void;
+  command: WorldCommand | null;
 }
 
-export function Playground({ repoStats, panelProject, active, motionEnabled, onToggleMotion, onViewProject }: Props) {
+export function Playground({ repoStats, panelProject, active, motionEnabled, onToggleMotion, onViewProject, command }: Props) {
   const [destination, setDestination] = useState<ProjectId | null>(null);
   const [navigationRequest, setNavigationRequest] = useState(0);
   const [arrived, setArrived] = useState<ProjectId | null>(null);
@@ -105,27 +114,81 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
   const menuButton = useRef<HTMLButtonElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const previousPanel = useRef(panelProject);
+  // The autopilot tour: which stop it is flying to or lingering at, and whether it is paused.
+  const [tour, setTour] = useState<{ stop: number; paused: boolean } | null>(null);
+  const tourRef = useRef(tour);
+  tourRef.current = tour;
+  const tourStop = tour ? TOUR_STOPS[tour.stop] : null;
   const leaveProject = () => {
     setArrived(null);
     setDestination(null);
+    setTour(null);
   };
   const returnToWorld = () => {
     leaveProject();
     sectionRef.current?.querySelector<HTMLCanvasElement>('canvas')?.focus({ preventScroll: true });
   };
   useEffect(() => {
-    if (previousPanel.current && !panelProject && active) returnToWorld();
+    // Closing the project panel mid-tour returns to the tour, which carries on from this stop.
+    if (previousPanel.current && !panelProject && active && !tourRef.current) returnToWorld();
     previousPanel.current = panelProject;
   }, [panelProject, active]);
   useEffect(() => {
-    if (!active) { setArrived(null); setMenuOpen(false); }
+    if (!active) { setArrived(null); setMenuOpen(false); setTour(null); }
   }, [active]);
-  const go = (id: ProjectId) => {
+  const flyTo = (id: ProjectId) => {
     setArrived(null);
     setDestination(id);
     setNavigationRequest(value => value + 1);
     setMenuOpen(false);
   };
+  // Choosing an island yourself takes over from the autopilot.
+  const go = (id: ProjectId) => {
+    setTour(null);
+    flyTo(id);
+  };
+  const startTour = () => {
+    setTour({ stop: 0, paused: false });
+    flyTo(TOUR_STOPS[0]);
+  };
+  const advanceTour = () => {
+    const current = tourRef.current;
+    if (!current) return;
+    const next = current.stop + 1;
+    if (next < TOUR_STOPS.length) {
+      setTour({ stop: next, paused: false });
+      flyTo(TOUR_STOPS[next]);
+      return;
+    }
+    setTour(null);
+    const remaining = publicIds.filter(id => !discovered.includes(id)).length;
+    setToast(remaining ? `That's the tour. ${remaining} more ${remaining === 1 ? 'island is' : 'islands are'} out there to find.` : "That's the tour, and every island is charted.");
+  };
+  const advanceRef = useRef(advanceTour);
+  advanceRef.current = advanceTour;
+  // Linger at each stop while its card is readable: not while paused, reading
+  // the project panel, or scrolled away. Pausing keeps the time already spent.
+  // With motion paused nothing moves on by itself; the visitor steps through with Next stop.
+  const dwellLeft = useRef(TOUR_DWELL);
+  useEffect(() => { dwellLeft.current = TOUR_DWELL; }, [tour?.stop]);
+  const dwelling = Boolean(tour && motionEnabled && !tour.paused && arrived === tourStop && !panelProject && !receded);
+  useEffect(() => {
+    if (!dwelling) return;
+    const started = performance.now();
+    const timer = window.setTimeout(() => advanceRef.current(), dwellLeft.current);
+    return () => {
+      window.clearTimeout(timer);
+      dwellLeft.current = Math.max(0, dwellLeft.current - (performance.now() - started));
+    };
+  }, [dwelling]);
+  const inTransit = Boolean(tour && arrived !== tourStop);
+  // Commands from the menu arrive with a fresh sequence number; bring the world into view first.
+  useEffect(() => {
+    if (!command) return;
+    if (window.scrollY > 40) window.scrollTo({ top: 0, behavior: motionEnabled ? 'smooth' : 'auto' });
+    if (command.kind === 'tour') startTour();
+    else go(command.id);
+  }, [command?.seq]);
   useEffect(() => {
     if (!menuOpen) return;
     const dismiss = (event: PointerEvent) => {
@@ -135,6 +198,8 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
     return () => document.removeEventListener('pointerdown', dismiss);
   }, [menuOpen]);
   const arrive = (id: ProjectId) => {
+    // Arriving somewhere off the tour's route means the visitor has taken the controls.
+    if (tourRef.current && id !== TOUR_STOPS[tourRef.current.stop]) setTour(null);
     if (projects[id].secret && !found.includes(id)) {
       const next = [...found, id];
       setFound(next);
@@ -151,6 +216,7 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
     });
   };
   const project = arrived ? projects[arrived] : null;
+  const onTour = tour !== null && arrived === tourStop;
 
   return <section ref={sectionRef} className="playground" aria-label="Explore Hanyu's world" data-ready={ready}>
     <div className="playground-intro">
@@ -172,7 +238,7 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
 
     <div className="playground-world">
       <Suspense fallback={<div className="playground-loading" role="status">Assembling a little universe…</div>}>
-        <ExplorationScene destination={destination} selectedProject={arrived} detailProject={panelProject} hiddenProjects={hiddenProjects} repoStats={repoStats} charted={charted} daylight={clock?.daylight ?? 1} onCometCaught={cometCaught} onCometMissed={cometMissed} navigationRequest={navigationRequest} motionEnabled={motionEnabled} onArrive={arrive} onDepart={leaveProject} onReady={() => setReady(true)} />
+        <ExplorationScene destination={destination} selectedProject={arrived} detailProject={panelProject} hiddenProjects={hiddenProjects} repoStats={repoStats} charted={charted} daylight={clock?.daylight ?? 1} onCometCaught={cometCaught} onCometMissed={cometMissed} touring={Boolean(tour)} navigationRequest={navigationRequest} motionEnabled={motionEnabled} onArrive={arrive} onDepart={leaveProject} onReady={() => setReady(true)} />
       </Suspense>
     </div>
 
@@ -182,6 +248,7 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
           <span className="playground-logbook-bar" aria-hidden="true"><i style={{ width: `${chartedCount / publicIds.length * 100}%` }} /></span>
           {chartedCount === publicIds.length ? 'ALL ISLANDS CHARTED' : `${String(chartedCount).padStart(2, '0')}/${publicIds.length} CHARTED`}
         </span>
+        <button className="playground-tour-button" onClick={tour ? leaveProject : startTour} aria-pressed={Boolean(tour)}><Route size={14} aria-hidden="true" />{tour ? 'End tour' : <><span className="playground-tour-full">Take the tour<span className="playground-tour-length"> · 1 min</span></span><span className="playground-tour-short">Tour</span></>}</button>
         <button ref={menuButton} aria-expanded={menuOpen} aria-controls="world-project-menu" onClick={() => setMenuOpen(value => !value)}><Compass size={14} /> Featured projects <span className="obs-mono playground-count-total">{String(listedIds.length).padStart(2, '0')}</span><span className="obs-mono playground-count-charted" aria-hidden="true">{chartedCount}/{publicIds.length}</span></button>
         <button onClick={onToggleMotion} aria-label={motionEnabled ? 'Pause motion' : 'Enable motion'} aria-pressed={motionEnabled}>{motionEnabled ? <Pause size={14} /> : <Play size={14} />}<span className="playground-motion-label">{motionEnabled ? 'Pause motion' : 'Enable motion'}</span></button>
       </div>
@@ -197,14 +264,21 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
       onClick={() => sectionRef.current?.scrollIntoView({ behavior: motionEnabled ? 'smooth' : 'auto', block: 'start' })}>
       <span aria-hidden="true" />
     </button>
-    <p className="playground-toast obs-mono" role="status" aria-live="polite" data-visible={Boolean(toast)}>{toast}</p>
+    <p className="playground-toast obs-mono" role="status" aria-live="polite" data-visible={Boolean(toast) && !inTransit}>{toast}</p>
+    {tour && inTransit && <div className="playground-tour-status obs-mono">
+      <span>TOUR · {tour.stop + 1} OF {TOUR_STOPS.length}</span><span className="playground-tour-heading">Flying to {projects[TOUR_STOPS[tour.stop]].name}</span>
+      <button onClick={leaveProject}>End tour</button>
+    </div>}
     <div className="playground-announcement" role="status" aria-live="polite">{arrived ? (projects[arrived].secret
       ? `Discovered ${projects[arrived].name}, a private project still in progress.`
-      : `Discovered ${projects[arrived].name}. ${chartedCount} of ${publicIds.length} islands charted.`) : destination ? `Travelling to ${projects[destination].name}.` : ''}</div>
+      : `Discovered ${projects[arrived].name}. ${chartedCount} of ${publicIds.length} islands charted.`) : destination ? `${tour ? `Tour stop ${tour.stop + 1} of ${TOUR_STOPS.length}. ` : ''}Travelling to ${projects[destination].name}.` : ''}</div>
     {project && arrived && <aside className="playground-discovery" aria-label={`${project.name} discovery`}>
-      <div className="playground-discovery-top">{project.secret
-        ? <span className="obs-mono playground-private"><Lock size={12} /> PRIVATE · IN PROGRESS</span>
-        : <span className="obs-mono"><Flag size={12} /> PROJECT DISCOVERED</span>}<button aria-label="Close discovery" onClick={returnToWorld}><X size={17} /></button></div>
+      <div className="playground-discovery-top">{onTour
+        ? <span className="obs-mono"><Route size={12} /> TOUR · {tour.stop + 1} OF {TOUR_STOPS.length}</span>
+        : project.secret
+          ? <span className="obs-mono playground-private"><Lock size={12} /> PRIVATE · IN PROGRESS</span>
+          : <span className="obs-mono"><Flag size={12} /> PROJECT DISCOVERED</span>}<button aria-label={onTour ? 'End tour' : 'Close discovery'} onClick={returnToWorld}><X size={17} /></button></div>
+      {onTour && motionEnabled && <span className="playground-tour-progress" data-running={dwelling} aria-hidden="true"><i key={tour.stop} style={{ animationDuration: `${TOUR_DWELL}ms` }} /></span>}
       {project.secret && <p className="playground-secret-note">You found something I haven't shipped yet.</p>}
       <h2>{project.name}</h2><p className="playground-question">{project.question}</p>
       <p className="playground-description">{project.description}</p>
@@ -218,6 +292,10 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
           // Private work has no repository to show; the way in is a conversation.
           ? <a className="playground-primary" href={`mailto:whanyu47@gmail.com?subject=${encodeURIComponent(project.name)}`}>Ask me about it <ArrowUpRight size={14} /></a>
           : <button className="playground-primary" onClick={() => onViewProject(arrived)}>Explore the project <ArrowUpRight size={14} /></button>}
+        {onTour && <>
+          {motionEnabled && <button onClick={() => setTour({ ...tour, paused: !tour.paused })} aria-pressed={tour.paused}>{tour.paused ? <Play size={13} /> : <Pause size={13} />}{tour.paused ? 'Resume' : 'Pause'}</button>}
+          <button onClick={advanceTour}>{tour.stop + 1 < TOUR_STOPS.length ? 'Next stop' : 'Finish'} <ArrowRight size={13} /></button>
+        </>}
       </div>
     </aside>}
   </section>;
