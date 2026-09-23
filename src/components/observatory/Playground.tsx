@@ -74,7 +74,7 @@ export function Playground({ panelProject, active, motionEnabled, onToggleMotion
       <strong><MousePointer2 size={16} aria-hidden="true" /><span className="playground-orbit-hint">Click an island to explore</span><span className="playground-touch-hint">Tap an island to explore</span></strong>
       <div className="playground-control-shortcuts playground-orbit-hint">
         <span><Move size={14} aria-hidden="true" /> Drag to orbit</span>
-        <span><kbd>W A S D</kbd> to fly</span>
+        <span><kbd>W A S D</kbd> fly <kbd>Shift</kbd> boost</span>
       </div>
       <p className="playground-orbit-hint"><kbd>Ctrl</kbd> + scroll to zoom <span aria-hidden="true">·</span> Scroll to read</p>
       <p className="playground-touch-hint">Pinch to zoom <span aria-hidden="true">·</span> Swipe to scroll</p>

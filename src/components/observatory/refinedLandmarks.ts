@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createBrain } from './brainSculpture';
 
 // The four sculptures share a quiet material language with the rest of the world.
 // Geometries used repeatedly within a sculpture are kept local to its builder.
@@ -215,61 +216,51 @@ export function makeQuant(): THREE.Group {
 
 export function makeMentalGym(): THREE.Group {
   const group = new THREE.Group();
-  const cortex = material(0xdda0ae, 0.84);
-  const creases = material(0xa95f7c, 0.88);
-  const steel = material(0xdde6dd, 0.35, 0.48);
+  // Turn the brain side-on to the home view so its profile and handle both read.
+  group.rotation.y = -0.79;
+  // Low metalness: without an environment map, a true metal would render black.
+  const iron = material(0x5d6a78, 0.38, 0.3);
+  const rubber = material(0x264b4a, 0.92, 0.02);
   const plates = material(0x8c79bd, 0.48, 0.2);
 
-  // One organic outline per side creates a broad brain silhouette with a fine midline cleft.
-  const halfOutline = new THREE.Shape();
-  halfOutline.moveTo(-0.06, 1.38);
-  halfOutline.bezierCurveTo(-0.25, 1.27, -0.53, 1.2, -0.7, 1.33);
-  halfOutline.bezierCurveTo(-0.91, 1.37, -1.04, 1.55, -1.02, 1.76);
-  halfOutline.bezierCurveTo(-1.08, 1.92, -1.02, 2.13, -0.91, 2.21);
-  halfOutline.bezierCurveTo(-0.83, 2.37, -0.64, 2.41, -0.52, 2.36);
-  halfOutline.bezierCurveTo(-0.35, 2.48, -0.15, 2.43, -0.06, 2.32);
-  halfOutline.lineTo(-0.06, 1.38);
-  const halfGeometry = new THREE.ExtrudeGeometry(halfOutline, {
-    depth: 0.55,
-    bevelEnabled: true,
-    // Leave a real gap at the midline after the bevel expands each outline.
-    bevelSize: 0.05,
-    bevelThickness: 0.09,
-    bevelSegments: 3,
-    curveSegments: 5,
-    steps: 1,
-  });
-  const foldPaths: Array<Array<[number, number]>> = [
-    [[-0.16, 2.18], [-0.3, 2.29], [-0.45, 2.17], [-0.64, 2.27], [-0.78, 2.2]],
-    [[-0.14, 1.98], [-0.31, 2.05], [-0.49, 1.92], [-0.68, 2.02], [-0.85, 1.95]],
-    [[-0.16, 1.72], [-0.34, 1.8], [-0.52, 1.64], [-0.7, 1.71], [-0.84, 1.63]],
-    [[-0.48, 1.93], [-0.55, 1.84], [-0.51, 1.74]],
-  ];
-
-  for (const side of [-1, 1]) {
-    const hemi = solid(halfGeometry, cortex);
-    hemi.scale.x = side === -1 ? 1 : -1;
-    hemi.position.z = -0.275;
-    group.add(hemi);
-
-    for (const points of foldPaths) {
-      const fold = tube(points.map(([x, y]) => new THREE.Vector3(side * -x, y, 0.372)), 0.027, creases, true);
-      group.add(fold);
-    }
-  }
-
-  // The barbell crosses the foreground, keeping the exercise metaphor clear.
-  const bar = solid(new THREE.CylinderGeometry(0.075, 0.075, 2.65, 8), steel);
-  bar.rotation.z = Math.PI / 2;
-  bar.position.set(0, 0.65, 0.59);
-  group.add(bar);
-  const plateGeometry = new THREE.CylinderGeometry(0.42, 0.42, 0.17, 12);
-  for (const x of [-1.11, -0.85, 0.85, 1.11]) {
+  // A training mat and a small stack of plates set the scene as a gym.
+  const mat = solid(roundedPanel(2.5, 1.7, 0.07, 0.22), rubber);
+  mat.rotation.x = -Math.PI / 2;
+  mat.position.y = 0.12;
+  group.add(mat);
+  const plateGeometry = new THREE.CylinderGeometry(0.34, 0.34, 0.1, 20);
+  [0, 1].forEach(layer => {
     const plate = solid(plateGeometry, plates);
-    plate.rotation.z = Math.PI / 2;
-    plate.position.set(x, 0.65, 0.59);
+    plate.position.set(0.4 + layer * 0.03, 0.27 + layer * 0.11, 1.18);
     group.add(plate);
-  }
+  });
+  // Rep lights come on at widening intervals: spaced repetition.
+  const repGeometry = new THREE.CylinderGeometry(0.06, 0.06, 0.03, 12);
+  [0, 1, 2].forEach(index => {
+    const rep = solid(repGeometry, material(0xb9f7e6, 0.4, 0, 0x6fe0cf, 0.2), true);
+    rep.name = `mental-gym-rep-${index}`;
+    rep.position.set(0.95, 0.21, -0.35 + index * 0.24);
+    group.add(rep);
+  });
+
+  // The kettlebell: a brain for a bell, an iron handle over the top, a flat foot.
+  const kettlebell = new THREE.Group();
+  kettlebell.name = 'mental-gym-kettlebell';
+  kettlebell.position.y = 0.2;
+  kettlebell.scale.setScalar(0.92);
+  const brain = createBrain();
+  brain.position.y = 0.1;
+  kettlebell.add(brain);
+  const foot = solid(new THREE.CylinderGeometry(0.44, 0.52, 0.14, 28), iron);
+  foot.position.y = 0.1;
+  kettlebell.add(foot);
+  // The handle arcs front to back, over the fissure, and runs into the brain.
+  const arc = Math.PI * 1.3;
+  const handle = solid(new THREE.TorusGeometry(0.56, 0.1, 12, 32, arc), iron);
+  handle.rotation.set(0, Math.PI / 2, -(arc - Math.PI) / 2);
+  handle.position.y = 1.25;
+  kettlebell.add(handle);
+  group.add(kettlebell);
   return group;
 }
 

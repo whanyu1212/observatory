@@ -31,6 +31,8 @@ export function createCameraJourney(position: Vector3, target: Vector3) {
       transition = null;
     },
     discard() { transition = null; saved = null; },
+    /** True while a focus or restore transition owns the camera. */
+    get active() { return transition !== null; },
     update(dt: number, motion: boolean) {
       if (!transition) return;
       transition.elapsed += dt;

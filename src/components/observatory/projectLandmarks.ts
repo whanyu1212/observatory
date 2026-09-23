@@ -456,61 +456,116 @@ function krillShell(curve: THREE.CatmullRomCurve3, radii: number[]) {
 export function makeKrill() {
   const group = new THREE.Group();
   group.name = 'krill-sculpture';
-  group.rotation.y = 0.1;
+  // Side-on to the home view, turned a little toward it: the curl is the silhouette.
+  group.rotation.y = 0.95;
   group.userData.bobAmplitude = 0.075;
   group.userData.bobSpeed = 1.4;
 
   const shell = new THREE.MeshPhysicalMaterial({
-    color: 0xf16b42, roughness: 0.32, metalness: 0.02,
-    clearcoat: 0.8, clearcoatRoughness: 0.2,
+    color: 0xf06a40, roughness: 0.32, metalness: 0.02,
+    clearcoat: 0.85, clearcoatRoughness: 0.2,
   });
-  const tailMaterial = standard(0xe34c35, 0.38, 0.02);
-  const seamMaterial = standard(0xa63730, 0.5, 0.02);
-  const legMaterial = standard(0xffb479, 0.44, 0.02);
-  const eyeMaterial = standard(0x080d15, 0.13, 0.05);
-  const antennaMaterial = standard(0xffa36c, 0.42, 0.02, 0xa84126, 0.08);
+  const tailMaterial = standard(0xe5563b, 0.36, 0.02);
+  const bandMaterial = standard(0xc84a36, 0.45, 0.02);
+  const legMaterial = standard(0xffb58a, 0.5, 0.02);
+  const eyeMaterial = new THREE.MeshPhysicalMaterial({ color: 0x0b1018, roughness: 0.08, clearcoat: 1 });
+  const antennaMaterial = standard(0xffa77a, 0.45, 0.02, 0xa84126, 0.06);
 
   const spine = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.67, 2.14, 0),
-    new THREE.Vector3(0.07, 2.19, 0),
-    new THREE.Vector3(-0.61, 1.99, 0),
-    new THREE.Vector3(-1.13, 1.52, 0),
-    new THREE.Vector3(-1.13, 1.02, 0),
-    new THREE.Vector3(-0.76, 0.67, 0),
-    new THREE.Vector3(-0.28, 0.61, 0),
+    new THREE.Vector3(0.62, 2.1, 0),
+    new THREE.Vector3(0.02, 2.2, 0),
+    new THREE.Vector3(-0.64, 2.0, 0),
+    new THREE.Vector3(-1.12, 1.5, 0),
+    new THREE.Vector3(-1.1, 0.98, 0),
+    new THREE.Vector3(-0.72, 0.66, 0),
+    new THREE.Vector3(-0.26, 0.64, 0),
   ]);
-  const radii = [0.38, 0.46, 0.39, 0.29, 0.2, 0.12, 0.065];
+  const radii = [0.42, 0.47, 0.4, 0.31, 0.22, 0.14, 0.08];
   const abdomen = solid(krillShell(spine, radii), shell);
   abdomen.name = 'krill-abdomen';
   group.add(abdomen);
 
-  // Fine shell joints read as armour plates, without a row of bead-shaped segments.
-  for (let index = 1; index < radii.length - 1; index++) {
-    const t = index / (radii.length - 1);
+  // Four slim bands mark the shell segments.
+  for (let index = 1; index < 5; index++) {
+    const t = index / 5.4;
     const center = spine.getPoint(t);
     const tangent = spine.getTangent(t);
     const normal = new THREE.Vector3(-tangent.y, tangent.x, 0).normalize();
+    const radius = THREE.MathUtils.lerp(radii[Math.floor(t * 6)], radii[Math.ceil(t * 6)], t * 6 % 1) + 0.012;
     const points = Array.from({ length: 25 }, (_, side) => {
       const angle = side / 24 * Math.PI * 2;
-      const point = center.clone().addScaledVector(normal, Math.cos(angle) * (radii[index] + 0.008));
-      point.z += Math.sin(angle) * (radii[index] + 0.008) * 0.72;
+      const point = center.clone().addScaledVector(normal, Math.cos(angle) * radius);
+      point.z += Math.sin(angle) * radius * 0.72;
       return point;
     });
-    group.add(tube(points, 0.017, seamMaterial, 24));
+    group.add(decoration(tube(points, 0.022, bandMaterial, 24)));
   }
 
-  const head = ellipsoid(0.5, [1.27, 0.75, 0.65], [0.68, 2.12, 0], shell);
+  // A rounded carapace and a short rostrum make the head.
+  const head = ellipsoid(0.5, [1.22, 0.86, 0.78], [0.66, 2.1, 0], shell);
   head.name = 'krill-head';
   group.add(head);
-  const rostrum = solid(new THREE.ConeGeometry(0.13, 0.91, 6), shell);
-  rostrum.rotation.z = -Math.PI / 2 + 0.19;
-  rostrum.position.set(1.41, 2.24, 0);
+  const rostrum = solid(new THREE.ConeGeometry(0.1, 0.55, 8), shell);
+  rostrum.rotation.z = -Math.PI / 2 + 0.25;
+  rostrum.position.set(1.36, 2.24, 0);
   group.add(rostrum);
-  [0, 1, 2].forEach(index => {
-    const tooth = solid(new THREE.ConeGeometry(0.046, 0.16 - index * 0.02, 4), tailMaterial);
-    tooth.position.set(1.23 + index * 0.18, 2.39 + index * 0.025, 0);
-    tooth.rotation.z = -0.35;
-    group.add(tooth);
+
+  // Big glossy eyes on short stalks, each with a catchlight.
+  [-1, 1].forEach(side => {
+    const base = new THREE.Vector3(1.0, 2.3, side * 0.2);
+    const tip = new THREE.Vector3(1.12, 2.52, side * 0.34);
+    group.add(tube([base, tip], 0.05, shell, 5));
+    const eye = solid(new THREE.SphereGeometry(0.15, 18, 12), eyeMaterial);
+    eye.position.copy(tip);
+    group.add(eye);
+    const glint = decoration(new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })));
+    glint.position.copy(tip).add(new THREE.Vector3(0.07, 0.07, side * 0.09));
+    group.add(glint);
+  });
+
+  // Two long antennae sweep back over the body, tapering to fine tips.
+  const antennae = new THREE.Group();
+  antennae.name = 'krill-antennae';
+  antennae.position.set(1.18, 2.3, 0);
+  [-1, 1].forEach(side => {
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, side * 0.16),
+      new THREE.Vector3(0.42, 0.5, side * 0.3),
+      new THREE.Vector3(0.18, 1.08, side * 0.42),
+      new THREE.Vector3(-0.62, 1.34, side * 0.52),
+      new THREE.Vector3(-1.5, 1.12, side * 0.58),
+    ]);
+    const geometry = new THREE.TubeGeometry(curve, 36, 0.032, 6, false);
+    // Taper each ring toward the tip.
+    const position = geometry.getAttribute('position');
+    const ring = new THREE.Vector3();
+    for (let index = 0; index < position.count; index++) {
+      const t = Math.floor(index / 7) / 36;
+      const center = curve.getPoint(t);
+      ring.fromBufferAttribute(position, index).sub(center).multiplyScalar(1 - t * 0.75).add(center);
+      position.setXYZ(index, ring.x, ring.y, ring.z);
+    }
+    geometry.computeVertexNormals();
+    antennae.add(decoration(new THREE.Mesh(geometry, antennaMaterial)));
+  });
+  group.add(antennae);
+
+  // Short walking legs under the head and small swimmerets under the tail.
+  [-1, 1].forEach(side => {
+    for (let index = 0; index < 4; index++) {
+      const x = 0.86 - index * 0.2;
+      group.add(decoration(tube([
+        new THREE.Vector3(x, 1.8, side * 0.2),
+        new THREE.Vector3(x + 0.05, 1.55, side * 0.32),
+        new THREE.Vector3(x - 0.08, 1.38, side * 0.36),
+      ], 0.03, legMaterial, 6)));
+    }
+    [0.36, 0.5, 0.64].forEach(t => {
+      const base = spine.getPoint(t);
+      const paddle = decoration(ellipsoid(0.1, [0.5, 1.4, 0.35], [base.x + 0.24, base.y - 0.16, side * 0.22], legMaterial));
+      paddle.rotation.z = -0.5;
+      group.add(paddle);
+    });
   });
 
   const tailFan = new THREE.Group();
@@ -518,12 +573,12 @@ export function makeKrill() {
   tailFan.position.copy(spine.getPoint(1));
   const finShape = new THREE.Shape();
   finShape.moveTo(0, 0);
-  finShape.quadraticCurveTo(0.35, 0.24, 0.88, 0.13);
-  finShape.quadraticCurveTo(0.78, -0.2, 0.14, -0.12);
+  finShape.quadraticCurveTo(0.35, 0.24, 0.84, 0.13);
+  finShape.quadraticCurveTo(0.76, -0.2, 0.14, -0.12);
   finShape.closePath();
   const finGeometry = new THREE.ExtrudeGeometry(finShape, { depth: 0.045, bevelEnabled: true, bevelSize: 0.025, bevelThickness: 0.02, bevelSegments: 1, steps: 1, curveSegments: 8 });
   finGeometry.rotateX(Math.PI / 2);
-  [-0.62, 0, 0.62].forEach((angle, index) => {
+  [-0.6, 0, 0.6].forEach((angle, index) => {
     const fin = solid(finGeometry, index === 1 ? shell : tailMaterial);
     fin.rotation.y = angle;
     fin.rotation.z = -0.18;
@@ -531,94 +586,38 @@ export function makeKrill() {
   });
   group.add(tailFan);
 
-  [-1, 1].forEach(side => {
-    const base = new THREE.Vector3(1.02, 2.22, side * 0.21);
-    const tip = new THREE.Vector3(1.12, 2.53, side * 0.34);
-    group.add(tube([base, tip], 0.042, tailMaterial, 5));
-    const eye = solid(new THREE.SphereGeometry(0.13, 14, 10), eyeMaterial);
-    eye.position.copy(tip);
-    group.add(eye);
-    const glint = decoration(new THREE.Mesh(new THREE.SphereGeometry(0.033, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff5dc })));
-    glint.position.copy(tip).add(new THREE.Vector3(0.04, 0.055, 0.08));
-    group.add(glint);
+  // Real krill glow; these photophores glow in Julia's purple, green and red.
+  [[0x9558b2, 0.14], [0x389826, 0.3], [0xcb3c33, 0.46]].forEach(([color, t], index) => {
+    const center = spine.getPoint(t);
+    const spot = decoration(new THREE.Mesh(
+      new THREE.SphereGeometry(0.075, 14, 10),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.3, roughness: 0.3 }),
+    ));
+    spot.name = `krill-light-${index}`;
+    const radius = THREE.MathUtils.lerp(radii[Math.floor(t * 6)], radii[Math.ceil(t * 6)], t * 6 % 1);
+    spot.position.set(center.x, center.y - radius * 0.35, radius * 0.7);
+    group.add(spot);
   });
 
-  const antennae = new THREE.Group();
-  antennae.name = 'krill-antennae';
-  antennae.position.set(1.16, 2.21, 0);
-  antennae.add(
-    tube([
-      new THREE.Vector3(0, 0, 0.18),
-      new THREE.Vector3(0.56, 0.6, 0.3),
-      new THREE.Vector3(0.37, 1.16, 0.37),
-      new THREE.Vector3(-0.65, 1.43, 0.45),
-    ], 0.025, antennaMaterial, 26),
-    tube([
-      new THREE.Vector3(0, 0, -0.18),
-      new THREE.Vector3(0.87, 0.29, -0.28),
-      new THREE.Vector3(1.07, 0.83, -0.36),
-      new THREE.Vector3(0.6, 1.1, -0.45),
-    ], 0.022, antennaMaterial, 24),
-  );
-  group.add(antennae);
-
-  // Paired, angular legs leave an open space inside the curled abdomen.
-  [-1, 1].forEach(side => {
-    for (let index = 0; index < 5; index++) {
-      const x = 0.84 - index * 0.19;
-      group.add(tube([
-        new THREE.Vector3(x, 1.91, side * 0.2),
-        new THREE.Vector3(x + 0.1, 1.49 - index * 0.055, side * 0.44),
-        new THREE.Vector3(x + 0.48, 1.17 - index * 0.055, side * 0.64),
-      ], 0.027, legMaterial, 8));
-    }
-    [0.39, 0.53, 0.66].forEach(t => {
-      const base = spine.getPoint(t);
-      group.add(tube([
-        base.clone().add(new THREE.Vector3(0.12, -0.08, side * 0.15)),
-        base.clone().add(new THREE.Vector3(0.34, -0.12, side * 0.28)),
-        base.clone().add(new THREE.Vector3(0.43, -0.27, side * 0.32)),
-      ], 0.022, legMaterial, 6));
-    });
-  });
-
-  // A chat bubble whose typing dots are Julia's purple, green and red.
+  // A small chat bubble, typing: this krill lives in Telegram and Discord.
   const bubble = new THREE.Group();
   bubble.name = 'krill-chat';
-  bubble.position.set(-0.5, 3.02, 0.32);
-  bubble.rotation.y = 1.14;
-  const paper = standard(0xf4efe6, 0.6, 0.02);
-  bubble.add(decoration(new THREE.Mesh(roundedPanel(0.8, 0.46, 0.08, 0.2), paper)));
-  const pointer = decoration(new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 3), paper));
-  pointer.position.set(0.2, -0.27, 0.04);
-  pointer.rotation.z = Math.PI + 0.45;
+  bubble.position.set(2.0, 3.28, 0.3);
+  const paper = standard(0xf7f4ee, 0.55, 0.02, 0xf7f4ee, 0.22);
+  bubble.add(decoration(new THREE.Mesh(roundedPanel(0.66, 0.38, 0.09, 0.18), paper)));
+  const pointer = decoration(new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.18, 3), paper));
+  pointer.position.set(-0.18, -0.22, 0.045);
+  pointer.rotation.z = Math.PI - 0.5;
   bubble.add(pointer);
-  const dotGeometry = new THREE.SphereGeometry(0.065, 12, 8);
-  [0x9558b2, 0x389826, 0xcb3c33].forEach((color, index) => {
-    const dot = decoration(new THREE.Mesh(dotGeometry, standard(color, 0.3, 0.05, color, 0.25)));
+  const dotGeometry = new THREE.SphereGeometry(0.05, 12, 8);
+  const dotMaterial = standard(0x2b3440, 0.4, 0.05);
+  [0, 1, 2].forEach(index => {
+    const dot = decoration(new THREE.Mesh(dotGeometry, dotMaterial));
     dot.name = `krill-typing-${index}`;
-    dot.position.set((index - 1) * 0.2, 0, 0.1);
+    dot.position.set((index - 1) * 0.16, 0, 0.1);
     bubble.add(dot);
   });
   group.add(bubble);
-
-  // A paper plane loops the island: messages arriving from Telegram and Discord.
-  const orbit = new THREE.Group();
-  orbit.name = 'krill-plane-orbit';
-  orbit.position.set(0.1, 2.2, 0);
-  orbit.userData.spinY = 0.55;
-  orbit.userData.bobAmplitude = 0.12;
-  orbit.userData.bobSpeed = 1.1;
-  decoration(orbit);
-  const nose = [0.3, 0, 0], tail = [-0.2, 0.02, 0], left = [-0.24, 0.04, 0.2], right = [-0.24, 0.04, -0.2], keel = [-0.2, -0.09, 0];
-  const planeGeometry = new THREE.BufferGeometry();
-  planeGeometry.setAttribute('position', new THREE.Float32BufferAttribute([...nose, ...left, ...tail, ...nose, ...tail, ...right, ...nose, ...keel, ...tail], 3));
-  planeGeometry.computeVertexNormals();
-  const plane = decoration(new THREE.Mesh(planeGeometry, new THREE.MeshStandardMaterial({ color: 0xeef4ff, roughness: 0.55, side: THREE.DoubleSide, flatShading: true })));
-  plane.position.set(1.85, 0, 0);
-  plane.rotation.set(0.25, Math.PI / 2, 0);
-  orbit.add(plane);
-  group.add(orbit);
 
   return group;
 }

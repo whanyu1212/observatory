@@ -130,7 +130,7 @@ export function createTravelTrail(explorer: THREE.Group) {
     setPixelRatio(pixelRatio: number) {
       material.uniforms.uPixelRatio.value = THREE.MathUtils.clamp(pixelRatio, 1, 2.5);
     },
-    update(moving: boolean, dt: number, motionEnabled: boolean) {
+    update(moving: boolean, dt: number, motionEnabled: boolean, boost = 0) {
       if (!motionEnabled) {
         reset();
         for (const jet of jets) jet.scale.x = 0.48;
@@ -142,7 +142,7 @@ export function createTravelTrail(explorer: THREE.Group) {
       hasLastPosition = true;
       if (jumped) reset();
       phase += dt;
-      const length = moving ? 1.02 + Math.sin(phase * 18) * 0.13 : 0.5 + Math.sin(phase * 3) * 0.025;
+      const length = moving ? (1.02 + Math.sin(phase * 18) * 0.13) * (1 + boost * 0.6) : 0.5 + Math.sin(phase * 3) * 0.025;
       for (const jet of jets) jet.scale.x = length;
 
       for (let index = 0; index < count;) {
@@ -177,8 +177,9 @@ export function createTravelTrail(explorer: THREE.Group) {
         emitTime += dt;
         explorer.updateWorldMatrix(true, false);
         backward.set(-1, 0, 0).transformDirection(explorer.matrixWorld);
-        while (emitTime >= 0.055) {
-          emitTime -= 0.055;
+        const interval = 0.055 / (1 + boost);
+        while (emitTime >= interval) {
+          emitTime -= interval;
           for (const z of NOZZLE_Z) emit(z);
         }
       } else {

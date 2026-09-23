@@ -12,6 +12,7 @@ import { createUniverseAtmosphere } from './universeAtmosphere';
 import { SUN_POSITION } from './celestialScenery';
 import { createSceneTheme } from './sceneTheme';
 import { createGlowSprites, type GlowSource } from './glowSprites';
+import { createFlightFeel } from './flightFeel';
 import { $theme, type SpectrumTheme } from '@/stores/osStore';
 
 export type ExplorationSceneProps = {
@@ -161,7 +162,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     renderer.shadowMap.autoUpdate = false;
     renderer.domElement.tabIndex = 0;
     renderer.domElement.setAttribute('role', 'application');
-    renderer.domElement.setAttribute('aria-label', 'Playable project universe. Scroll to read more of the page. Drag with a mouse to orbit, hold Ctrl while scrolling or pinch to zoom, and use WASD or arrow keys to pilot the explorer. On touchscreens, swipe to scroll and use the camera buttons to rotate. Select a project marker or tap an island to travel.');
+    renderer.domElement.setAttribute('aria-label', 'Playable project universe. Scroll to read more of the page. Drag with a mouse to orbit, hold Ctrl while scrolling or pinch to zoom, and use WASD or arrow keys to pilot the explorer, holding Shift to boost. On touchscreens, swipe to scroll and use the camera buttons to rotate. Select a project marker or tap an island to travel.');
     renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;cursor:grab;';
     host.prepend(renderer.domElement);
 
@@ -292,6 +293,11 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     addGlow('gem-dota-radiant', 0x7be07b, 0.9, .45);
     addGlow('gem-dota-dire', 0xff6a5c, 0.9, .45);
     addGlow('opencouch-lamp', 0xffc98a, 1.9, .7);
+    [0x9558b2, 0x389826, 0xcb3c33].forEach((color, index) => addGlow(`krill-light-${index}`, color, .8, .8));
+    [0, 1, 2].forEach(index => {
+      const rep = world.group.getObjectByName(`mental-gym-rep-${index}`) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> | undefined;
+      if (rep) glowSources.push({ object: rep, color: new THREE.Color(0x8ff3e2), size: .6, intensity: () => rep.material.emissiveIntensity * .45 });
+    });
     addGlow('wisp-core', 0x7ff7ea, 3.4, .4);
     [0xa78bea, 0x8ac86d, 0xe78187].forEach((color, index) => addGlow(`nimble-antenna-${index}`, color, 1, .9));
     addGlow('nimble-handoff', 0xd9f991, 1.7, 1);
@@ -309,6 +315,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     });
     const glows = createGlowSprites(renderer, glowSources);
     scene.add(glows.object);
+    const flight = createFlightFeel(world.explorer, accent);
+    scene.add(flight.object);
 
     const sceneTheme = createSceneTheme({
       fog: [(scene.fog as THREE.FogExp2).color],
@@ -340,6 +348,12 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     let arrivedAt: ProjectId | null = null;
     const forwardAxis = new THREE.Vector3(1, 0, 0);
     const explorerTargetQuat = new THREE.Quaternion();
+    // The explorer's unbanked orientation; flight feel adds bank and pitch on top.
+    const headingQuat = world.explorer.quaternion.clone();
+    let boost = 0;
+    let baseFov = 41;
+    const chaseGoal = new THREE.Vector3();
+    const chaseStep = new THREE.Vector3();
     let animationTime = 0;
     let frame = 0;
     let visible = true;
@@ -538,7 +552,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       });
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
-      camera.fov = compact ? 54 : width / height < 1.15 ? 47 : 41;
+      baseFov = compact ? 54 : width / height < 1.15 ? 47 : 41;
+      camera.fov = baseFov + boost * 6;
       camera.updateProjectionMatrix();
       glows.setViewport(height * pixelRatio, camera.fov);
       const previousHomeDistance = homeDistance;
@@ -586,9 +601,15 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       cameraForward.normalize();
       cameraRight.crossVectors(cameraForward, camera.up).normalize();
       const move = new THREE.Vector3().addScaledVector(cameraForward, forwardInput).addScaledVector(cameraRight, rightInput);
+      // Shift boosts manual flight; long trips to a destination boost on their own.
+      const wantsBoost = motionRef.current && (
+        (keys.has('shift') && move.lengthSq() > 0)
+        || (move.lengthSq() === 0 && target.distanceToSquared(current) > 25)
+      );
+      boost = THREE.MathUtils.damp(boost, wantsBoost ? 1 : 0, wantsBoost ? 3 : 5, dt);
       if (move.lengthSq() > 0) {
         targetProject = null;
-        move.normalize().multiplyScalar(5.4 * dt);
+        move.normalize().multiplyScalar(5.4 * (1 + boost * 1.4) * dt);
         current.add(move);
         clampFlight();
         current.y = THREE.MathUtils.damp(current.y, cruiseElevation(), 5, dt);
@@ -597,7 +618,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       } else {
         const delta = target.clone().sub(current);
         if (delta.lengthSq() > 0.01) {
-          const travel = motionRef.current ? Math.min(delta.length(), dt * 4.7) : delta.length();
+          const travel = motionRef.current ? Math.min(delta.length(), dt * 4.7 * (1 + boost * 1.5)) : delta.length();
           current.add(delta.normalize().multiplyScalar(travel));
           explorerTargetQuat.setFromUnitVectors(forwardAxis, delta.clone().normalize());
         }
@@ -607,6 +628,20 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       arrivalReaction = animate ? Math.min(1, arrivalReaction + dt / 0.8) : 1;
       const greeting = Math.sin(arrivalReaction * Math.PI);
       journey.update(dt, animate);
+      // While the explorer moves, the view leans a third of the way toward it.
+      if (animate && !journey.active && (move.lengthSq() > 0 || target.distanceToSquared(current) > .01)) {
+        chaseGoal.copy(homeTarget).lerp(current, .35);
+        chaseStep.copy(chaseGoal).sub(controls.target).multiplyScalar(1 - Math.exp(-1.6 * dt));
+        controls.target.add(chaseStep);
+        camera.position.add(chaseStep);
+      }
+      const fov = baseFov + boost * 6;
+      if (Math.abs(camera.fov - fov) > .01) {
+        camera.fov = fov;
+        camera.updateProjectionMatrix();
+        glows.setViewport(height * renderer.getPixelRatio(), fov);
+        labelsDirty = true;
+      }
       controls.update(dt);
       camera.updateMatrixWorld();
       if (hoverPending && now - lastHoverCheck > 16) {
@@ -626,7 +661,9 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         explorerTargetQuat.setFromUnitVectors(forwardAxis, dir);
       }
       world.explorer.position.set(current.x, current.y + 1.58 + (animate ? Math.sin(now * 0.003) * 0.1 + greeting * 0.24 : 0), current.z);
-      world.explorer.quaternion.slerp(explorerTargetQuat, animate ? 1 - Math.exp(-22 * dt) : 1);
+      // A softer turn while animating lets the bank read as a real arc.
+      headingQuat.slerp(explorerTargetQuat, animate ? 1 - Math.exp(-11 * dt) : 1);
+      flight.update(dt, animate, boost, headingQuat, current);
       const heading = world.explorer.rotation.y.toFixed(3);
       if (heading !== lastHeading) { host.dataset.explorerHeading = heading; lastHeading = heading; }
       const lookTarget = lookAt ?? '';
@@ -665,7 +702,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         if (Math.abs(item.lift - previousLift) > .001) labelsDirty = true;
       });
       reactions.update(dt, animate, lookingAtRef.current ?? hoveredProject ?? focusedProject, world.explorer.position, camera.position);
-      travelTrail.update(move.lengthSq() > 0 || target.distanceToSquared(current) > .01, dt, animate);
+      travelTrail.update(move.lengthSq() > 0 || target.distanceToSquared(current) > .01, dt, animate, boost);
 
       let nearest: ProjectId | null = null;
       let nearestDistance = Infinity;
@@ -880,6 +917,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     };
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
+      if (key === 'shift') { keys.add(key); wake(); return; }
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(key)) {
         if (key.startsWith('arrow')) event.preventDefault();
         if (focusedProject || targetProject) {

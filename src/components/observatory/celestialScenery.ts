@@ -86,7 +86,8 @@ export function createCelestialScenery() {
   moonGeometry.setAttribute('color', new THREE.BufferAttribute(moonColors, 3));
   const moon = new THREE.Mesh(moonGeometry, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
   moon.name = 'distant-moon';
-  moon.position.set(-24, -6, -3);
+  // Low and wide of the western islands, so it never sits behind a sculpture on arrival.
+  moon.position.set(-27, -11, -9);
   object.add(moon);
 
   // All rocks share one draw call; their transforms are uploaded only at creation.

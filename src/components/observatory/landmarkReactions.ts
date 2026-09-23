@@ -23,6 +23,11 @@ export function createLandmarkReactions(world: THREE.Group) {
   const lineWidths = transcript.userData.widths as number[];
   const approval = world.getObjectByName('wisp-approval')!;
   const typing = [0, 1, 2].map(index => world.getObjectByName(`krill-typing-${index}`)!);
+  const kettlebell = world.getObjectByName('mental-gym-kettlebell')!;
+  const kettlebellRestY = kettlebell.position.y;
+  const reps = [0, 1, 2].map(index =>
+    world.getObjectByName(`mental-gym-rep-${index}`) as THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>,
+  );
   const krill = world.getObjectByName('landmark-krill')!;
   const antennae = world.getObjectByName('krill-antennae')!;
   const tail = world.getObjectByName('krill-tail-fan')!;
@@ -47,7 +52,7 @@ export function createLandmarkReactions(world: THREE.Group) {
   });
   const attention = { 'gem-dota': 0, wisp: 0, krill: 0, 'claude-code-anatomy': 0 };
   const reactionAge = { 'gem-dota': 2, wisp: 2, krill: 2, 'claude-code-anatomy': 2 };
-  const sceneAge = { 'fractional-bonds': 3, 'claude-code-anatomy': 3 };
+  const sceneAge = { 'fractional-bonds': 3, 'claude-code-anatomy': 3, 'mental-gym': 3 };
   let previous: ProjectId | null = null;
   let time = 0;
   const toward = new THREE.Vector3();
@@ -174,6 +179,17 @@ export function createLandmarkReactions(world: THREE.Group) {
       shippingLights.forEach((light, index) => {
         const offset = (shippingModel.position.x - SHIPPING_GATES[index]) * flow / .12;
         light.material.emissiveIntensity = .3 + Math.exp(-offset * offset) * 2.4 + (offset > 0 ? .8 : 0);
+      });
+
+      // Two quick reps on arrival; otherwise the kettlebell rests on the mat.
+      const liftAge = sceneAge['mental-gym'];
+      const rep = liftAge < 1.6 ? Math.sin(Math.PI * (liftAge % .8) / .8) : 0;
+      kettlebell.position.y = kettlebellRestY + rep * .38;
+      kettlebell.rotation.x = rep * .12;
+      // Rep lights come on at widening intervals (0s, 1s, 3s), then reset.
+      const practice = motion ? time % 5 : 4;
+      reps.forEach((light, index) => {
+        light.material.emissiveIntensity = practice >= [0, 1, 3][index] ? 1.4 : .15;
       });
 
       // A complete coin becomes four pieces, then assembles itself again.
