@@ -183,60 +183,6 @@ class CyberAudioEngine {
     }
   }
 
-  // Window close / disengage soft hiss
-  playDisengage() {
-    if (!$audioEnabled.get()) return;
-    try {
-      this.initCtx();
-      if (!this.ctx) return;
-
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(440, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.1);
-
-      gain.gain.setValueAtTime(0.025, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.1);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.1);
-    } catch {
-      // Audio catch
-    }
-  }
-
-  // Keyboard terminal keystroke
-  playKeyClick() {
-    if (!$audioEnabled.get()) return;
-    try {
-      this.initCtx();
-      if (!this.ctx) return;
-
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-
-      osc.type = 'square';
-      const randomFreq = 600 + Math.random() * 400;
-      osc.frequency.setValueAtTime(randomFreq, this.ctx.currentTime);
-
-      gain.gain.setValueAtTime(0.015, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.02);
-
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.02);
-    } catch {
-      // Audio catch
-    }
-  }
-
   /** True once a user gesture has unlocked audio. The world never unlocks it on its own. */
   get running() {
     return this.ctx?.state === 'running';

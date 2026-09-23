@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useStore } from '@nanostores/react';
 import { ArrowUpRight, AudioLines, VolumeX } from 'lucide-react';
-import { $audioEnabled, $theme, $windows, minimizeApp } from '@/stores/osStore';
+import { $audioEnabled, $theme } from '@/stores/osStore';
 import { $auroraUnlocked, loadProgress } from '@/stores/progressStore';
 import { soundEffects } from '@/components/effects/AudioEngine';
 import { Playground } from './Playground';
@@ -83,9 +83,6 @@ export function Observatory({ repoStats = {} }: { repoStats?: RepoStatsMap }) {
 
   const navigate = (next: Section, event?: React.MouseEvent) => {
     event?.preventDefault();
-    Object.values($windows.get()).forEach(win => {
-      if (win.isOpen && !win.isMinimized) minimizeApp(win.id);
-    });
     setSection(next);
     setProjectPanel(null);
     window.history.pushState(null, '', `#${next}`);

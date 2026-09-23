@@ -207,9 +207,6 @@ body.app-shell { margin: 0; overflow-x: clip; background: var(--obs-bg); color: 
 .obs-swatch-blueprint > span { background: #84e2ef; }
 .obs-swatch-aurora > span { background: linear-gradient(135deg, #7cf2c4, #a98af5); }
 .obs-live-dot { display: inline-block; flex-shrink: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--obs-accent); box-shadow: 0 0 8px color-mix(in srgb,var(--obs-accent),transparent 55%); }
-.workspace-window { font-family: 'IBM Plex Mono',monospace; }
-.workspace-window.cyber-panel { background: var(--obs-surface); border-color: var(--obs-line); }
-.workspace-window.window-active { border-color: color-mix(in srgb,var(--obs-accent),transparent 35%); }
 
 @media (min-width:1600px) { .obs-hero { min-height: 660px; } }
 @media (max-width:1000px) {
@@ -235,7 +232,6 @@ body.app-shell { margin: 0; overflow-x: clip; background: var(--obs-bg); color: 
   .obs-map-layer { inset: 0; }
 }
 @media (max-width:700px) {
-  :root { --workspace-top: 88px; }
   .obs-header { flex-wrap: nowrap; padding: 18px 24px; gap: 12px; }
   .obs-nav { gap: 14px; }
   .obs-nav a { font-size: 11px; white-space: nowrap; }
@@ -269,7 +265,6 @@ body.app-shell { margin: 0; overflow-x: clip; background: var(--obs-bg); color: 
   .obs-project-preview { left: 23px; right: 23px; }
 }
 @media (pointer:coarse) {
-  .workspace-window [aria-label^='Close'], .workspace-window [aria-label^='Minimize'] { min-width: 44px; min-height: 44px; }
   .obs-nav a, .obs-sound-control, .obs-motion-control, .obs-swatch, .obs-footer-contact, .obs-project-tabs button { min-height: 44px; }
   .obs-swatch { width: 34px; border-radius: 8px; display: grid; place-items: center; }
   .obs-pointer-hint { display: none; }
