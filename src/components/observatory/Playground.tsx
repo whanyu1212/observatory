@@ -88,7 +88,9 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
   const cometMissed = () => {
     if (tippedRef.current || $cometCatches.get() > 0) return;
     tippedRef.current = true;
-    setToast('The comet got away. Hold Shift to boost, or tap the comet to give chase.');
+    // Touch screens have no Shift key; point them at the tap instead.
+    const touch = window.matchMedia('(pointer: coarse)').matches;
+    setToast(touch ? 'The comet got away. Tap the next one to give chase.' : 'The comet got away. Hold Shift to boost, or tap the comet to give chase.');
   };
   // Charting every island also unlocks Aurora, so visitors with motion paused can earn it.
   useEffect(() => {
@@ -155,7 +157,7 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
       <p className="obs-mono playground-kicker"><span /> HANYU'S SMALL UNIVERSE</p>
       <h1>Follow your<br /><span>curiosity.</span></h1>
       <p>I'm Hanyu. An AI builder, data scientist,<br className="playground-desktop-break" /> and open-source contributor.</p>
-      {clock && <p className="playground-clock obs-mono" data-night={clock.daylight < 0.5}><span aria-hidden="true" />{clock.time} in Singapore · {clock.mood}</p>}
+      {clock && <p className="playground-clock obs-mono" data-night={clock.daylight < 0.5}><span aria-hidden="true" /><span>{clock.time} in Singapore<span className="playground-clock-mood"> · {clock.mood}</span></span></p>}
     </div>
 
     <aside className="playground-controls" aria-label="How to explore the universe">
@@ -180,7 +182,7 @@ export function Playground({ repoStats, panelProject, active, motionEnabled, onT
           <span className="playground-logbook-bar" aria-hidden="true"><i style={{ width: `${chartedCount / publicIds.length * 100}%` }} /></span>
           {chartedCount === publicIds.length ? 'ALL ISLANDS CHARTED' : `${String(chartedCount).padStart(2, '0')}/${publicIds.length} CHARTED`}
         </span>
-        <button ref={menuButton} aria-expanded={menuOpen} aria-controls="world-project-menu" onClick={() => setMenuOpen(value => !value)}><Compass size={14} /> Featured projects <span className="obs-mono">{String(listedIds.length).padStart(2, '0')}</span></button>
+        <button ref={menuButton} aria-expanded={menuOpen} aria-controls="world-project-menu" onClick={() => setMenuOpen(value => !value)}><Compass size={14} /> Featured projects <span className="obs-mono playground-count-total">{String(listedIds.length).padStart(2, '0')}</span><span className="obs-mono playground-count-charted" aria-hidden="true">{chartedCount}/{publicIds.length}</span></button>
         <button onClick={onToggleMotion} aria-label={motionEnabled ? 'Pause motion' : 'Enable motion'} aria-pressed={motionEnabled}>{motionEnabled ? <Pause size={14} /> : <Play size={14} />}<span className="playground-motion-label">{motionEnabled ? 'Pause motion' : 'Enable motion'}</span></button>
       </div>
     </div>

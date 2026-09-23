@@ -122,7 +122,7 @@ export const projects: Record<ProjectId, {
     tagline: 'Agentic trading, in progress',
     name: 'Alpha Workbench', secret: true, trail: 'agents', title: ['Alpha.', 'In the works.'],
     question: 'What if a team of agents ran the trading desk?',
-    description: 'A private, in-progress workbench for agentic trading: AI agents that research markets, weigh risk and propose trades, built to test whether a team of agents can find a real edge.',
+    description: 'A private, in-progress workbench exploring agentic trading: what happens when a team of AI agents shares the work of a trading desk.',
     stack: [], repository: '', gallery: [],
   },
 };

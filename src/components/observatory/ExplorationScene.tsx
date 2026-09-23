@@ -296,7 +296,23 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         const reveal = revealViews[id];
         const right = reveal ? new THREE.Vector3().crossVectors(reveal.clone().negate(), camera.up).normalize() : new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
         if (!compact) point.addScaledVector(right, THREE.MathUtils.clamp((1100 - width) / 140, 0, 3));
-        journey.focus(point, THREE.MathUtils.clamp(controls.getDistance() * 0.76, controls.minDistance, compact ? 26 : 23), revealViews[id]);
+        // Phones frame the island closer: only a narrow band of canvas is left clear.
+        const distance = THREE.MathUtils.clamp(controls.getDistance() * 0.76, controls.minDistance, compact ? 17 : 23);
+        if (compact) {
+          // On phones the discovery card covers the lower canvas and the camera
+          // toolbar the upper; aim so the island sits in the clear band between.
+          const hostBounds = host.getBoundingClientRect();
+          const card = host.closest('.playground')?.querySelector('.playground-discovery')?.getBoundingClientRect();
+          const toolbar = host.querySelector('.world-camera-toolbar')?.getBoundingClientRect();
+          if (card && toolbar && hostBounds.height > 0) {
+            const bandCenter = (toolbar.bottom + card.top) / 2 - hostBounds.top;
+            const lift = THREE.MathUtils.clamp(1 - 2 * bandCenter / hostBounds.height, -0.6, 0.6);
+            const forward = reveal ? reveal.clone().negate() : new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+            point.addScaledVector(up, -lift * distance * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+          }
+        }
+        journey.focus(point, distance, revealViews[id]);
       } else journey.restore();
       interactiveUntil = motionRef.current ? performance.now() + 1400 : 0;
       labelsDirty = true;
@@ -382,6 +398,12 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
       cometScreenPoint: () => {
         const point = comet.head.position.clone().project(camera);
         return comet.active ? [(point.x * .5 + .5) * width, (-point.y * .5 + .5) * height] : null;
+      },
+      buoyScreenPoint: () => {
+        const buoy = world.group.getObjectByName('signal-buoy');
+        if (!buoy) return null;
+        const point = buoy.getWorldPosition(new THREE.Vector3()).project(camera);
+        return [(point.x * .5 + .5) * width, (-point.y * .5 + .5) * height];
       },
     });
     const glows = createGlowSprites(renderer, glowSources);
@@ -507,6 +529,7 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
     navigateRef.current = setWaypoint;
 
     const secretPoint = WORLD_POINTS['alpha-workbench'];
+    const buoyTarget = world.group.getObjectByName('signal-buoy-target');
     const avoidPlanet = (step?: THREE.Vector3) => {
       // Never fly through the ringed planet: motion that would enter it turns
       // into sliding around its edge, so flying straight at it still gets past.
@@ -810,7 +833,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         raycaster.setFromCamera(hoverPointer, camera);
         const hit = raycaster.intersectObjects(hoverPickableProjects, false)[0];
         hoveredProject = hit ? world.hoverPickers.get(hit.object) ?? null : null;
-        renderer.domElement.style.cursor = hoveredProject ? 'pointer' : 'grab';
+        const overSignal = Boolean(buoyTarget && raycaster.intersectObject(buoyTarget, false).length) || (comet.active && raycaster.intersectObject(comet.target, false).length > 0);
+        renderer.domElement.style.cursor = hoveredProject || overSignal ? 'pointer' : 'grab';
       }
       const lookAt = lookingAtRef.current ?? hoveredProject ?? focusedProject;
       if (lookAt && target.distanceToSquared(current) < 0.04 && !move.lengthSq()) {
@@ -1100,6 +1124,11 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
         wake();
         return;
       }
+      // Tapping the blinking buoy follows its signal through the corridor to the hidden island.
+      if (buoyTarget && raycaster.intersectObject(buoyTarget, false).length) {
+        setWaypoint('alpha-workbench');
+        return;
+      }
       const projectHits = raycaster.intersectObjects(pickableProjects, false);
       if (projectHits.length) {
         const id = world.pickers.get(projectHits[0].object);
@@ -1376,6 +1405,8 @@ export function ExplorationScene({ destination, selectedProject, detailProject, 
           pointer-events: none;
         }
         .world-signal[data-visible="true"] { opacity: 1; transform: translate(-50%, 0); }
+        /* On phones the canvas runs past the screen; pin the hint to the viewport. */
+        @media (max-width: 700px) { .world-signal { position: fixed; bottom: 20px; width: calc(100% - 32px); white-space: normal; text-align: center; line-height: 1.5; border-radius: 12px; } }
         @media (max-width: 700px) {
           .world-camera-toolbar {
             top: 80px;

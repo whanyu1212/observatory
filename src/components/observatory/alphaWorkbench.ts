@@ -262,6 +262,10 @@ export function makeSignalBuoy(): THREE.Group {
   light.name = 'signal-buoy-light';
   light.position.y = 0.67;
   buoy.add(light);
+  // A generous invisible tap target: on touch screens, tapping the buoy is the way to follow its signal.
+  const target = new THREE.Mesh(new THREE.SphereGeometry(1.3, 10, 8), new THREE.MeshBasicMaterial({ visible: false }));
+  target.name = 'signal-buoy-target';
+  buoy.add(target);
   buoy.userData.bobAmplitude = 0.12;
   buoy.userData.bobSpeed = 0.9;
   buoy.userData.spinY = 0.25;
