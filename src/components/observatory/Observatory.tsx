@@ -143,7 +143,7 @@ export function Observatory({ repoStats = {} }: { repoStats?: RepoStatsMap }) {
       </main>
 
       <footer className="obs-footer"><span className="obs-mono">HANYU WU <span className="obs-footer-slash">/</span> STILL CURIOUS. STILL BUILDING.</span>
-        <div className="obs-environments" aria-label="Visual environment"><span className="obs-mono">SPECTRUM</span>{([{id:'orbital',label:'Observatory'}, {id:'signal',label:'Signal'}, {id:'blueprint',label:'Blueprint'}, ...(auroraUnlocked ? [{id:'aurora',label:'Aurora (unlocked)'}] : [])] as const).map(item => <button key={item.id} type="button" className={`obs-swatch obs-swatch-${item.id}`} aria-label={`${item.label} environment`} aria-pressed={direction === item.id} onClick={() => setDirection(item.id)}><span /></button>)}</div>
+        <div className="obs-environments" aria-label="Visual environment"><span className="obs-mono">SPECTRUM</span>{([{id:'orbital',label:'Observatory'}, {id:'signal',label:'Signal'}, {id:'blueprint',label:'Blueprint'}, ...(auroraUnlocked ? [{id:'aurora' as const,label:'Aurora (unlocked)'}] : [])] as const).map(item => <button key={item.id} type="button" className={`obs-swatch obs-swatch-${item.id}`} aria-label={`${item.label} environment`} aria-pressed={direction === item.id} onClick={() => setDirection(item.id)}><span /></button>)}</div>
         <a className="obs-footer-contact obs-mono" href="mailto:whanyu47@gmail.com">LET'S CONNECT <ArrowUpRight size={14} /></a>
       </footer>
       {projectPanel && <ProjectPanel projectId={projectPanel} motionEnabled={motionEnabled} onClose={() => setProjectPanel(null)} />}
